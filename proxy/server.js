@@ -12,15 +12,14 @@ const server = http.createServer((req, res) => {
     const requestOrigin = req.headers.origin;
 
     // Strict Origin Check (if configured)
-    if (ALLOWED_ORIGIN !== '*' && requestOrigin !== ALLOWED_ORIGIN) {
-        if (req.method === 'OPTIONS') {
-            // Maybe allow Options for preflight but block actual? 
-            // Safest is to just block if origin doesn't match.
-        }
-        // For simplicity/debugging, if mismatch we might allow but warn? 
-        // No, for security request let's enforce if env is set.
-        if (requestOrigin && ALLOWED_ORIGIN.split(',').indexOf(requestOrigin) === -1) {
-            res.writeHead(403);
+    if (ALLOWED_ORIGIN !== '*' && requestOrigin) {
+        const allowedList = ALLOWED_ORIGIN.split(',').map(o => o.trim());
+        if (allowedList.indexOf(requestOrigin) === -1) {
+            console.log(`Blocked Origin: ${requestOrigin} vs Allowed: ${ALLOWED_ORIGIN}`);
+            res.writeHead(403, {
+                'Access-Control-Allow-Origin': allowedList[0],
+                'Content-Type': 'text/plain'
+            });
             res.end('Origin not allowed');
             return;
         }
@@ -71,6 +70,12 @@ const server = http.createServer((req, res) => {
     const proxyReq = https.request(options, (proxyRes) => {
         // Forward Status
         const headers = { ...proxyRes.headers };
+
+        // Remove upstream CORS headers to avoid duplicates/conflicts
+        delete headers['access-control-allow-origin'];
+        delete headers['access-control-allow-methods'];
+        delete headers['access-control-allow-headers'];
+        delete headers['access-control-allow-credentials'];
 
         // Add CORS to response
         headers['Access-Control-Allow-Origin'] = requestOrigin || '*';
