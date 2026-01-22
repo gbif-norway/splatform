@@ -142,19 +142,19 @@ function App() {
         {/* Top Section: Upload & Config (Grid Layout) */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
 
-          {/* Left Column: Image (4 cols) */}
-          <div className="lg:col-span-4 space-y-4 h-full">
+          {/* Left Column: Image (6 cols) */}
+          <div className="lg:col-span-6 space-y-4 h-full flex flex-col">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider pl-1 flex items-center gap-2">
                 <span className="w-6 h-6 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-xs">1</span>
                 Input Image
               </h2>
             </div>
-            <ImageUploader onImageReady={setImage} className="h-full min-h-[400px]" />
+            <ImageUploader onImageReady={setImage} className="flex-1 min-h-[600px]" />
           </div>
 
-          {/* Right Column: Config & Action (8 cols) */}
-          <div className="lg:col-span-8 flex flex-col space-y-6">
+          {/* Right Column: Config & Action (6 cols) */}
+          <div className="lg:col-span-6 flex flex-col space-y-6">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider pl-1 flex items-center gap-2">
                 <span className="w-6 h-6 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-xs">2</span>
