@@ -7,11 +7,29 @@ export function useSettings() {
     const __saveSettings = (newSettings: AppSettings) => {
         StorageService.saveSettings(newSettings);
         setSettings(newSettings);
+        // Dispatch custom event to notify other hook instances
+        window.dispatchEvent(new CustomEvent('slpat-settings-changed', { detail: newSettings }));
     };
 
-    // Sync with local storage on mount (in case changed in another tab, though unlikely to need real-time sync for this)
     useEffect(() => {
-        setSettings(StorageService.getSettings());
+        const handleSettingsChange = (e: Event) => {
+             const detail = (e as CustomEvent<AppSettings>).detail;
+             if (detail) {
+                 setSettings(detail);
+             } else {
+                 setSettings(StorageService.getSettings());
+             }
+        };
+
+        // Listen for internal changes
+        window.addEventListener('slpat-settings-changed', handleSettingsChange);
+        // Listen for cross-tab changes
+        window.addEventListener('storage', () => setSettings(StorageService.getSettings()));
+
+        return () => {
+             window.removeEventListener('slpat-settings-changed', handleSettingsChange);
+             window.removeEventListener('storage', () => setSettings(StorageService.getSettings()));
+        };
     }, []);
 
     return {
