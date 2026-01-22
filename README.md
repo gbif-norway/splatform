@@ -1,73 +1,86 @@
-# React + TypeScript + Vite
+# Splatform (Species Label Automated Transcription) Web Edition
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+**Splatform** is a powerful client-side web application designed to automate the transcription of species specimen labels. It leverages modern Large Language Models (LLMs) to convert images of labels into structured Darwin Core (DWC) JSON data.
 
-Currently, two official plugins are available:
+Check out the live demo: **[https://gbif-norway.github.io/splatform/](https://gbif-norway.github.io/splatform/)**
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+![Splatform Screenshot](https://via.placeholder.com/800x400?text=Splatform+Interface+Preview)
 
-## React Compiler
+## ✨ Features
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **Multi-Model Support**: Integrate with top-tier LLM providers directly from your browser:
+  - **OpenAI** (GPT-4o, GPT-4 Turbo)
+  - **Google Gemini** (1.5 Pro, Flash)
+  - **Anthropic** (Claude 3.5 Sonnet)
+  - **xAI** (Grok Vision)
+- **Two-Step Pipeline**:
+  1.  **Transcription**: Converts raw label images into faithfulness markdown text.
+  2.  **Standardization**: specific prompt to convert text into Darwin Core standard JSON.
+- **Privacy First**: API keys and history are stored **locally** in your browser's LocalStorage. No data is sent to our servers.
+- **CORS Proxy Support**: Includes a deployable proxy to bypass browser restrictions for Anthropic and xAI APIs.
+- **Responsive Design**: Built with React, Vite, and TailwindCSS for a premium, mobile-friendly experience.
 
-## Expanding the ESLint configuration
+## 🚀 Getting Started
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### Prerequisites
+- Node.js 18+
+- API Keys for one or more supported providers.
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+### Local Development
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+1.  **Clone the repository**:
+    ```bash
+    git clone https://github.com/gbif-norway/splatform.git
+    cd splatform
+    ```
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+2.  **Install dependencies**:
+    ```bash
+    npm install
+    ```
+
+3.  **Start the development server**:
+    ```bash
+    npm run dev
+    ```
+    Open `http://localhost:5173` to view it in your browser.
+
+## 🛠 Deployment to GitHub Pages
+
+This repository relies on **GitHub Actions** for deployment to handle proper routing and build optimization.
+
+1.  Push your changes to the `main` branch.
+2.  The workflow `.github/workflows/deploy.yml` will automatically build and deploy the app.
+3.  Ensure your repository settings under **Pages** are set to **Source: GitHub Actions**.
+
+## 🌐 CORS Proxy Setup
+
+Direct browser calls to APIs like **Anthropic (Claude)** and **xAI (Grok)** are often blocked by browser security policies (CORS). To use these providers, you must deploy a simple proxy.
+
+### 1. Build & Deploy the Proxy
+A ready-to-use Node.js proxy is included in the `/proxy` directory.
+
+**Build for x86 (Standard Server/Cluster):**
+```bash
+podman build --platform linux/amd64 -t ghcr.io/gbif-norway/splat-proxy:latest ./proxy
+podman push ghcr.io/gbif-norway/splat-proxy:latest
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+**Deploy to Kubernetes:**
+Apply the included manifest in `/k8s/deployment.yaml` (edit the environment variables first!):
+```bash
+kubectl apply -f k8s/deployment.yaml
 ```
+
+### 2. Configure the Web App
+1.  Open **Settings** in the Splatform web app.
+2.  Enter your **CORS Proxy URL** (e.g., `https://proxy.your-domain.org`).
+3.  The app will transparently route requests effectively.
+
+## 🤝 Contributing
+
+Contributions are welcome! Please fork the repository and submit a Pull Request.
+
+## 📄 License
+
+MIT License. See `LICENSE` for details.
