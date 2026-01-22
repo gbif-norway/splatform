@@ -7,14 +7,16 @@ import { ResultTable } from './components/ResultTable';
 import { History } from './components/History';
 import { ErrorDisplay } from './components/ErrorDisplay';
 import { Button } from './components/ui-elements';
-import { Settings as SettingsIcon, History as HistoryIcon, Play, Github } from 'lucide-react';
+import { Settings as SettingsIcon, History as HistoryIcon, Play, Github, Sun, Moon } from 'lucide-react';
 import { useSettings } from './hooks/useSettings';
+import { useTheme } from './hooks/useTheme';
 import { LLMService } from './services/llm';
 import { StorageService, type TranscribedItem } from './services/storage';
 import type { GBIFOccurrence } from './services/gbif';
 
 function App() {
   const { settings } = useSettings();
+  const { theme, toggleTheme } = useTheme();
   const [showSettings, setShowSettings] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
 
@@ -150,21 +152,25 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-[#0a0a0a] to-black text-slate-200 font-sans selection:bg-blue-500/30">
+    <div className="min-h-screen bg-background text-foreground font-sans selection:bg-primary/30 transition-colors duration-300">
 
       {/* Header */}
-      <header className="fixed top-0 w-full border-b border-white/5 bg-slate-950/50 backdrop-blur-xl z-50">
+      <header className="fixed top-0 w-full border-b border-border bg-background/80 backdrop-blur-xl z-50">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold shadow-lg shadow-blue-500/20">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-bold shadow-lg shadow-primary/20">
               S
             </div>
-            <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-100 to-slate-300">
-              Splatform <span className="text-xs font-normal text-slate-500 ml-2 tracking-widest uppercase">Web Edition</span>
+            <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground-muted">
+              Splatform <span className="text-xs font-normal text-foreground-muted ml-2 tracking-widest uppercase">Web Edition</span>
             </h1>
           </div>
 
           <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" onClick={toggleTheme} className="h-9 w-9 p-0" title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}>
+              {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+            </Button>
+            <div className="w-px h-6 bg-border mx-1 hidden sm:block"></div>
             <Button variant="ghost" className="hidden sm:flex" onClick={() => window.open('https://github.com/gbif-norway/splatform', '_blank')}>
               <Github size={18} className="mr-2" /> GitHub
             </Button>
@@ -187,8 +193,8 @@ function App() {
           {/* Left Column: Image (6 cols) */}
           <div className="lg:col-span-6 space-y-4 h-full flex flex-col">
             <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider pl-1 flex items-center gap-2">
-                <span className="w-6 h-6 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-xs">1</span>
+              <h2 className="text-sm font-semibold text-foreground-muted uppercase tracking-wider pl-1 flex items-center gap-2">
+                <span className="w-6 h-6 rounded-full bg-primary/20 text-primary flex items-center justify-center text-xs">1</span>
                 Input Image
               </h2>
             </div>
