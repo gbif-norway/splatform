@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: slpat-proxy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: slpat-proxy
+  template:
+    metadata:
+      labels:
+        app: slpat-proxy
+    spec:
+      containers:
+      - name: proxy
+        image: ghcr.io/gbif-norway/slpat-proxy:latest
+        ports:
+        - containerPort: 8080
+        env:
+        - name: ALLOWED_ORIGIN
+          value: "https://your-username.github.io" # REPLACE THIS
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: slpat-proxy
+spec:
+  selector:
+    app: slpat-proxy
+  ports:
+  - port: 80
+    targetPort: 8080
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: slpat-proxy
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    # Add cert-manager annotations if you have it
+    # cert-manager.io/cluster-issuer: letsencrypt-prod
+spec:
+  rules:
+  - host: proxy.your-domain.com # REPLACE THIS
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: slpat-proxy
+            port:
+              number: 80
