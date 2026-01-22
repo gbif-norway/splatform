@@ -47,7 +47,7 @@ export function PromptConfig({
                         onChange={handleProviderChange}
                         className="w-32 bg-slate-800 border-slate-600"
                     >
-                        {providers.length === 0 && <option value="openai">OpenAI</option>}
+                        {providers.length === 0 && <option value="" disabled>No configured providers</option>}
                         {providers.map(p => (
                             <option key={p} value={p}>{p.toUpperCase()}</option>
                         ))}

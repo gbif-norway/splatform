@@ -11,7 +11,7 @@ export const GeminiProvider: LLMProvider = {
             { id: 'gemini-1.0-pro-vision', name: 'Gemini 1.0 Pro Vision', provider: 'gemini' },
         ];
 
-        if (!apiKey) return defaultModels;
+        if (!apiKey) return [];
 
         try {
             const baseUrl = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`;

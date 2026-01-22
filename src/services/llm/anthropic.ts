@@ -11,7 +11,7 @@ export const AnthropicProvider: LLMProvider = {
             { id: 'claude-3-sonnet-20240229', name: 'Claude 3 Sonnet', provider: 'anthropic' },
             { id: 'claude-3-haiku-20240307', name: 'Claude 3 Haiku', provider: 'anthropic' },
         ];
-        if (!apiKey) return defaultModels;
+        if (!apiKey) return [];
 
         try {
             const baseUrl = 'https://api.anthropic.com/v1/models';
