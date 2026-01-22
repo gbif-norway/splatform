@@ -58,7 +58,7 @@ export function PromptConfig({
                         className="w-48 bg-slate-800 border-slate-600"
                     >
                         {filteredModels.length === 0 ? (
-                            <option value="">No models</option>
+                            <option value="">No models (Check API Key)</option>
                         ) : (
                             filteredModels.map(m => (
                                 <option key={m.id} value={m.id}>{m.name}</option>

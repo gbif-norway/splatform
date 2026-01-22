@@ -4,18 +4,44 @@ export const GeminiProvider: LLMProvider = {
     id: 'gemini',
     name: 'Google Gemini',
 
-    listModels: async (apiKey: string, _proxyUrl?: string): Promise<LLMModel[]> => {
-        // Gemini API list_models requires a different endpoint style, often complex to list just compatible ones.
-        // We'll stick to a solid static list + basic fetch check if possible, but for now specific models are safer.
+    listModels: async (apiKey: string, proxyUrl?: string): Promise<LLMModel[]> => {
         const defaultModels: LLMModel[] = [
             { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash', provider: 'gemini' },
             { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro', provider: 'gemini' },
             { id: 'gemini-1.0-pro-vision', name: 'Gemini 1.0 Pro Vision', provider: 'gemini' },
         ];
-        // We verify key validity by just returning defaults or attempting a dummy call? 
-        // For now, static list is fine for Gemini as models are stable.
+
         if (!apiKey) return defaultModels;
-        return defaultModels;
+
+        try {
+            const baseUrl = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`;
+            const endpoint = proxyUrl ? `${proxyUrl}/${baseUrl}` : baseUrl;
+
+            // Note: Google Cloud API often does NOT support CORS for listing models from browser 
+            // unless proxied. Direct requests might fail without a proxy.
+            const response = await fetch(endpoint);
+
+            if (!response.ok) return defaultModels;
+
+            const data = await response.json();
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const models = data.models
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                .filter((m: any) => m.name.includes('gemini') && (m.supportedGenerationMethods?.includes('generateContent')))
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                .map((m: any): LLMModel => {
+                    const id = m.name.replace('models/', '');
+                    return {
+                        id: id,
+                        name: m.displayName || id,
+                        provider: 'gemini'
+                    };
+                });
+
+            return models.length > 0 ? models : defaultModels;
+        } catch {
+            return defaultModels;
+        }
     },
 
     generateTranscription: async (apiKey: string, modelId: string, imageBase64: string, prompt: string, proxyUrl?: string): Promise<string> => {

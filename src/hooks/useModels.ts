@@ -15,11 +15,17 @@ export function useModels() {
             const all: LLMModel[] = [];
 
             await Promise.all(providers.map(async (p) => {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                const key = (settings as any)[`${p}Key`];
-                const provider = LLMService.getProvider(p);
-                const pModels = await provider.listModels(key, settings.proxyUrl);
-                all.push(...pModels);
+                try {
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    const key = (settings as any)[`${p}Key`];
+                    // If no key, basic static list usually returned immediately by provider.
+                    const provider = LLMService.getProvider(p);
+                    const pModels = await provider.listModels(key, settings.proxyUrl);
+                    all.push(...pModels);
+                } catch (err) {
+                    console.warn(`Failed to list models for ${p}`, err);
+                    // Could optionally push defaults here if provider.listModels throws instead of returning defaults
+                }
             }));
 
             setModels(all);
