@@ -52,42 +52,42 @@ ${error.stack}
 
     return (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-            <Card className="w-full max-w-2xl bg-slate-900 border-red-500/50 shadow-2xl shadow-red-900/20 max-h-[90vh] flex flex-col">
+            <Card className="w-full max-w-2xl bg-background border-red-500/50 shadow-2xl shadow-red-500/10 max-h-[90vh] flex flex-col">
                 <div className="flex items-center justify-between p-4 border-b border-white/10 bg-red-500/10">
-                    <h2 className="text-lg font-bold text-red-400 flex items-center gap-2">
+                    <h2 className="text-lg font-bold text-red-500 flex items-center gap-2">
                         Runtime Error
                     </h2>
-                    <button onClick={onClose} className="text-slate-400 hover:text-white"><X size={20} /></button>
+                    <button onClick={onClose} className="text-foreground-muted hover:text-foreground"><X size={20} /></button>
                 </div>
 
                 <div className="p-6 overflow-y-auto space-y-4">
-                    <div className="bg-red-950/30 border border-red-900/50 p-4 rounded-lg">
-                        <p className="text-red-200 font-medium text-lg">{error.message}</p>
+                    <div className="bg-red-500/5 border border-red-500/20 p-4 rounded-lg">
+                        <p className="text-red-600 dark:text-red-400 font-medium text-lg">{error.message}</p>
                     </div>
 
-                    <p className="text-slate-400 text-sm">
+                    <p className="text-foreground-muted text-sm">
                         An error occurred while communicating with the AI provider.
                         Below is the technical information useful for debugging.
                         You can copy this and send it to your developer or AI assistant to fix the issue.
                     </p>
 
                     <div className="space-y-2">
-                        <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Technical Details</h3>
-                        <div className="bg-slate-950 rounded-lg p-4 font-mono text-xs text-slate-300 overflow-x-auto border border-slate-800">
+                        <h3 className="text-xs font-bold text-foreground-muted uppercase tracking-wider">Technical Details</h3>
+                        <div className="bg-surface rounded-lg p-4 font-mono text-xs text-foreground overflow-x-auto border border-border">
                             <div className="grid grid-cols-[100px_1fr] gap-2 mb-4">
-                                <span className="text-slate-500">Provider:</span>
-                                <span className="text-blue-400">{context?.provider}</span>
+                                <span className="text-foreground-muted">Provider:</span>
+                                <span className="text-primary font-bold">{context?.provider}</span>
 
-                                <span className="text-slate-500">Model:</span>
-                                <span className="text-blue-400">{context?.model}</span>
+                                <span className="text-foreground-muted">Model:</span>
+                                <span className="text-accent font-bold">{context?.model}</span>
 
-                                <span className="text-slate-500">Stage:</span>
-                                <span className="text-yellow-400">{context?.stage}</span>
+                                <span className="text-foreground-muted">Stage:</span>
+                                <span className="text-primary">{context?.stage}</span>
                             </div>
 
-                            <div className="border-t border-slate-800 pt-3 mt-2">
-                                <span className="text-slate-500 block mb-2">Full Error:</span>
-                                <pre className="whitespace-pre-wrap text-slate-400">
+                            <div className="border-t border-border pt-3 mt-2">
+                                <span className="text-foreground-muted block mb-2">Full Error:</span>
+                                <pre className="whitespace-pre-wrap text-foreground-muted">
                                     {JSON.stringify(context?.rawError, null, 2)}
                                 </pre>
                             </div>
@@ -95,9 +95,9 @@ ${error.stack}
                     </div>
                 </div>
 
-                <div className="p-4 border-t border-white/10 bg-slate-900/50 flex justify-end gap-3">
+                <div className="p-4 border-t border-border bg-surface/50 flex justify-end gap-3">
                     <Button variant="secondary" onClick={onClose}>Close</Button>
-                    <Button onClick={handleCopy} className="bg-blue-600 hover:bg-blue-500 text-white border-none">
+                    <Button onClick={handleCopy}>
                         {copied ? <Check size={16} className="mr-2" /> : <Copy size={16} className="mr-2" />}
                         {copied ? 'Copied Report' : 'Copy Debug Report'}
                     </Button>

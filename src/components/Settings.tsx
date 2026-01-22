@@ -55,8 +55,8 @@ export function Settings({ onClose }: { onClose?: () => void }) {
 
     return (
         <Card className="p-6 max-w-2xl mx-auto space-y-6">
-            <div className="flex items-center justify-between border-b border-white/5 pb-4">
-                <h2 className="text-xl font-bold bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">
+            <div className="flex items-center justify-between border-b border-border pb-4">
+                <h2 className="text-xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
                     LLM Settings
                 </h2>
             </div>
@@ -83,7 +83,7 @@ export function Settings({ onClose }: { onClose?: () => void }) {
                                 <button
                                     type="button"
                                     onClick={() => toggleShow(field.id)}
-                                    className="absolute right-3 top-2.5 text-slate-500 hover:text-slate-300"
+                                    className="absolute right-3 top-2.5 text-foreground-muted hover:text-foreground"
                                 >
                                     {showKeys[field.id] ? <EyeOff size={16} /> : <Eye size={16} />}
                                 </button>
@@ -96,24 +96,24 @@ export function Settings({ onClose }: { onClose?: () => void }) {
                                 title="Test connection"
                             >
                                 {validating[field.id] ? (
-                                    <div className="w-4 h-4 border-2 border-slate-400 border-t-transparent rounded-full animate-spin"></div>
+                                    <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
                                 ) : (
-                                    <span className={validationStatus[field.id] === 'success' ? 'text-emerald-400' : validationStatus[field.id] === 'error' ? 'text-red-400' : 'text-slate-400'}>
+                                    <span className={validationStatus[field.id] === 'success' ? 'text-emerald-500' : validationStatus[field.id] === 'error' ? 'text-red-500' : 'text-foreground-muted'}>
                                         Test
                                     </span>
                                 )}
                             </Button>
                         </div>
-                        {validationStatus[field.id] === 'success' && <p className="text-xs text-emerald-400">Connection successful!</p>}
-                        {validationStatus[field.id] === 'error' && <p className="text-xs text-red-400">Connection failed. Check key or proxy settings.</p>}
+                        {validationStatus[field.id] === 'success' && <p className="text-xs text-emerald-500">Connection successful!</p>}
+                        {validationStatus[field.id] === 'error' && <p className="text-xs text-red-500">Connection failed. Check key or proxy settings.</p>}
                     </div>
                 ))}
             </div>
 
             {/* Proxy URL Configuration */}
-            <div className="space-y-1 pt-4 border-t border-white/5">
+            <div className="space-y-1 pt-4 border-t border-border">
                 <Label htmlFor="proxyUrl">CORS Proxy URL (Optional)</Label>
-                <p className="text-xs text-slate-500 mb-2">Required for Anthropic/xAI on standard web hosting.</p>
+                <p className="text-xs text-foreground-muted mb-2">Required for Anthropic/xAI on standard web hosting.</p>
                 <Input
                     id="proxyUrl"
                     type="text"

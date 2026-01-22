@@ -1,6 +1,7 @@
 import { Textarea, Label } from './ui-elements';
 import { Select, Card } from './ui-misc';
 import { useModels } from '../hooks/useModels';
+import { cn } from '../utils/cn';
 
 interface PromptConfigProps {
     step: 1 | 2;
@@ -38,14 +39,17 @@ export function PromptConfig({
     };
 
     return (
-        <Card className="p-4 space-y-4 border-l-4 border-l-blue-500 bg-slate-900/60">
+        <Card className={cn(
+            "p-4 space-y-4 border-l-4 bg-surface/60",
+            step === 1 ? "border-l-primary" : "border-l-accent"
+        )}>
             <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-slate-100">Step {step}: {step === 1 ? 'Transcription' : 'Standardization'}</h3>
+                <h3 className="text-lg font-semibold text-foreground">Step {step}: {step === 1 ? 'Transcription' : 'Standardization'}</h3>
                 <div className="flex gap-2">
                     <Select
                         value={selectedProvider}
                         onChange={handleProviderChange}
-                        className="w-32 bg-slate-800 border-slate-600"
+                        className="w-32"
                     >
                         {providers.length === 0 && <option value="" disabled>No configured providers</option>}
                         {providers.map(p => (
@@ -55,7 +59,7 @@ export function PromptConfig({
                     <Select
                         value={selectedModel}
                         onChange={(e) => setSelectedModel(e.target.value)}
-                        className="w-48 bg-slate-800 border-slate-600"
+                        className="w-48"
                     >
                         {filteredModels.length === 0 ? (
                             <option value="">No models (Check API Key)</option>

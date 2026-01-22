@@ -16,9 +16,9 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     ({ className, variant = 'primary', size = 'default', isLoading, children, disabled, ...props }, ref) => {
         const variants = {
-            primary: "bg-blue-600 hover:bg-blue-700 text-white shadow-lg sm:shadow-blue-500/20",
-            secondary: "bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700",
-            ghost: "hover:bg-slate-800 text-slate-400 hover:text-slate-100",
+            primary: "bg-primary hover:opacity-90 text-white shadow-lg",
+            secondary: "bg-surface hover:bg-surface-hover text-foreground border border-border",
+            ghost: "hover:bg-surface-hover text-foreground-muted hover:text-foreground",
             danger: "bg-red-600 hover:bg-red-700 text-white"
         };
 
@@ -33,7 +33,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
                 ref={ref}
                 disabled={disabled || isLoading}
                 className={cn(
-                    "inline-flex items-center justify-center rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500/40 disabled:opacity-50 disabled:cursor-not-allowed text-sm",
+                    "inline-flex items-center justify-center rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:opacity-50 disabled:cursor-not-allowed text-sm",
                     variants[variant],
                     sizes[size],
                     className
@@ -54,7 +54,7 @@ export const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttribute
             <input
                 ref={ref}
                 className={cn(
-                    "flex h-10 w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 disabled:cursor-not-allowed disabled:opacity-50 text-slate-100 transition-all",
+                    "flex h-10 w-full rounded-md border border-border bg-surface px-3 py-2 text-sm placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary disabled:cursor-not-allowed disabled:opacity-50 text-foreground transition-all",
                     className
                 )}
                 {...props}
@@ -69,7 +69,7 @@ export const Label = React.forwardRef<HTMLLabelElement, React.LabelHTMLAttribute
         return (
             <label
                 ref={ref}
-                className={cn("text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-slate-300 mb-2 block", className)}
+                className={cn("text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-foreground-muted mb-2 block", className)}
                 {...props}
             />
         );
@@ -83,7 +83,7 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, React.TextareaHTML
             <textarea
                 ref={ref}
                 className={cn(
-                    "flex min-h-[80px] w-full rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 disabled:cursor-not-allowed disabled:opacity-50 text-slate-100 transition-all resize-y",
+                    "flex min-h-[80px] w-full rounded-md border border-border bg-surface px-3 py-2 text-sm placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary disabled:cursor-not-allowed disabled:opacity-50 text-foreground transition-all resize-y",
                     className
                 )}
                 {...props}

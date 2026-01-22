@@ -22,23 +22,23 @@ export function History({ onLoadItem, refreshTrigger }: HistoryProps) {
     }
 
     if (items.length === 0) return (
-        <div className="p-4 text-center text-slate-500 text-sm">No history yet</div>
+        <div className="p-4 text-center text-foreground-muted text-sm">No history yet</div>
     );
 
     return (
         <div className="space-y-3 p-2">
             <div className="flex justify-between items-center px-2">
-                <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">History ({items.length})</h3>
-                <button onClick={handleClear} className="text-slate-600 hover:text-red-400"><Trash2 size={14} /></button>
+                <h3 className="text-sm font-semibold text-foreground-muted uppercase tracking-wider">History ({items.length})</h3>
+                <button onClick={handleClear} className="text-foreground-muted hover:text-red-400"><Trash2 size={14} /></button>
             </div>
             {items.map(item => (
                 <div
                     key={item.id}
                     onClick={() => onLoadItem(item)}
-                    className="group cursor-pointer rounded-lg border border-slate-800 bg-slate-900/30 p-3 hover:bg-slate-800 hover:border-blue-500/30 transition-all"
+                    className="group cursor-pointer rounded-lg border border-border bg-surface/30 p-3 hover:bg-surface-hover hover:border-primary/30 transition-all"
                 >
                     <div className="flex justify-between items-start mb-1">
-                        <span className="text-xs text-slate-500">{new Date(item.timestamp).toLocaleString(undefined, {
+                        <span className="text-xs text-foreground-muted">{new Date(item.timestamp).toLocaleString(undefined, {
                             year: 'numeric',
                             month: 'numeric',
                             day: 'numeric',
@@ -47,12 +47,12 @@ export function History({ onLoadItem, refreshTrigger }: HistoryProps) {
                             second: '2-digit',
                             hour12: false
                         })}</span>
-                        <span className="text-xs bg-slate-800 px-1.5 py-0.5 rounded text-blue-300">{item.provider1}</span>
+                        <span className="text-xs bg-surface-hover px-1.5 py-0.5 rounded text-primary">{item.provider1}</span>
                     </div>
-                    <div className="flex items-center gap-2 text-sm text-slate-300">
-                        <Clock size={12} className="text-slate-600" />
+                    <div className="flex items-center gap-2 text-sm text-foreground">
+                        <Clock size={12} className="text-foreground-muted" />
                         <span className="truncate">{item.result1.substring(0, 30)}...</span>
-                        <ArrowRight size={12} className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity text-blue-400" />
+                        <ArrowRight size={12} className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity text-primary" />
                     </div>
                 </div>
             ))}

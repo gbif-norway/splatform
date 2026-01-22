@@ -7,7 +7,7 @@ function cn(...inputs: ClassValue[]) {
 }
 
 export const Card = ({ className, children, ...props }: React.HTMLAttributes<HTMLDivElement> & { children: React.ReactNode }) => (
-    <div className={cn("rounded-xl border border-slate-800 bg-slate-900/50 backdrop-blur-sm shadow-xl", className)} {...props}>
+    <div className={cn("rounded-xl border border-border bg-surface shadow-xl", className)} {...props}>
         {children}
     </div>
 );
@@ -19,7 +19,7 @@ export const Select = React.forwardRef<HTMLSelectElement, React.SelectHTMLAttrib
                 <select
                     ref={ref}
                     className={cn(
-                        "flex h-10 w-full items-center justify-between rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 disabled:cursor-not-allowed disabled:opacity-50 text-slate-100 appearance-none transition-all",
+                        "flex h-10 w-10 sm:w-full items-center justify-between rounded-md border border-border bg-surface px-3 py-2 text-sm placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary disabled:cursor-not-allowed disabled:opacity-50 text-foreground appearance-none transition-all",
                         className
                     )}
                     {...props}
