@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: proxy
-        image: ghcr.io/gbif-norway/slpat-proxy:latest
+        image: ghcr.io/gbif-norway/splat-proxy:latest
         ports:
         - containerPort: 8080
         env:

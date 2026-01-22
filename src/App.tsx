@@ -118,12 +118,12 @@ function App() {
               S
             </div>
             <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-100 to-slate-300">
-              SpLAT <span className="text-xs font-normal text-slate-500 ml-2 tracking-widest uppercase">Web Edition</span>
+              Splatform <span className="text-xs font-normal text-slate-500 ml-2 tracking-widest uppercase">Web Edition</span>
             </h1>
           </div>
 
           <div className="flex items-center gap-2">
-            <Button variant="ghost" className="hidden sm:flex" onClick={() => window.open('https://github.com/v7labs/slpat', '_blank')}>
+            <Button variant="ghost" className="hidden sm:flex" onClick={() => window.open('https://github.com/gbif-norway/splatform', '_blank')}>
               <Github size={18} className="mr-2" /> GitHub
             </Button>
             <Button variant="ghost" onClick={() => setShowHistory(!showHistory)}>
