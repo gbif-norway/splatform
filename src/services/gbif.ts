@@ -23,7 +23,7 @@ export const GBIFService = {
     parseOccurrenceId: (input: string): string | null => {
         if (!input) return null;
 
-        // Handle full URLs like https://www.gbif.org/occurrence/2432617679
+        // Handle full URLs like https://www.gbif.org/occurrence/4052452374
         const urlMatch = input.match(/occurrence\/(\d+)/);
         if (urlMatch) return urlMatch[1];
 

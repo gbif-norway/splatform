@@ -235,7 +235,7 @@ export function ImageUploader({ onImageReady, onGBIFData, className }: ImageUplo
                                     </Button>
                                 </div>
                                 {gbifError && <p className="text-xs text-red-400 mt-2">{gbifError}</p>}
-                                <p className="text-[10px] text-slate-500 text-center uppercase tracking-widest mt-4">Example: https://www.gbif.org/occurrence/2432617679</p>
+                                <p className="text-[10px] text-slate-500 text-center uppercase tracking-widest mt-4">Example: https://www.gbif.org/occurrence/4052452374</p>
                             </div>
                         </div>
                     )}
