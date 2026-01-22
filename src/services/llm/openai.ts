@@ -43,33 +43,51 @@ export const OpenAIProvider: LLMProvider = {
         }
     },
 
-    generateTranscription: async (apiKey: string, modelId: string, imageBase64: string, prompt: string): Promise<string> => {
+    generateTranscription: async (apiKey: string, modelId: string, imageBase64: string, prompt: string, proxyUrl?: string): Promise<string> => {
         try {
-            const response = await fetch('https://api.openai.com/v1/chat/completions', {
+            const baseUrl = 'https://api.openai.com/v1/chat/completions';
+            const endpoint = proxyUrl ? `${proxyUrl}/${baseUrl}` : baseUrl;
+
+            const isReasoning = modelId.startsWith('o1') || modelId.startsWith('o3');
+            // Some newer models require max_completion_tokens. 
+            // We'll use it for reasoning models and try to stick to max_tokens for others unless we know better.
+            // User reported gpt-4o failing with max_tokens? That might be a specific version or alias behavior.
+            // We'll trust standard behavior but if it's o1 we MUST use max_completion_tokens.
+
+            // Construct body dynamically
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const body: any = {
+                model: modelId,
+                messages: [
+                    {
+                        role: "user",
+                        content: [
+                            { type: "text", text: prompt },
+                            {
+                                type: "image_url",
+                                image_url: {
+                                    url: imageBase64,
+                                    detail: "high"
+                                }
+                            }
+                        ]
+                    }
+                ]
+            };
+
+            if (isReasoning) {
+                body.max_completion_tokens = 4096;
+            } else {
+                body.max_tokens = 4096;
+            }
+
+            const response = await fetch(endpoint, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${apiKey}`
                 },
-                body: JSON.stringify({
-                    model: modelId,
-                    messages: [
-                        {
-                            role: "user",
-                            content: [
-                                { type: "text", text: prompt },
-                                {
-                                    type: "image_url",
-                                    image_url: {
-                                        url: imageBase64, // Expecting data:image/jpeg;base64,...
-                                        detail: "high"
-                                    }
-                                }
-                            ]
-                        }
-                    ],
-                    max_tokens: 4096
-                })
+                body: JSON.stringify(body)
             });
 
             if (!response.ok) {
@@ -90,20 +108,30 @@ export const OpenAIProvider: LLMProvider = {
             const baseUrl = 'https://api.openai.com/v1/chat/completions';
             const endpoint = proxyUrl ? `${proxyUrl}/${baseUrl}` : baseUrl;
 
+            const isReasoning = modelId.startsWith('o1') || modelId.startsWith('o3');
+
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const body: any = {
+                model: modelId,
+                messages: [
+                    { role: "system", content: prompt },
+                    { role: "user", content: text }
+                ]
+            };
+
+            if (isReasoning) {
+                body.max_completion_tokens = 4096;
+            } else {
+                body.max_tokens = 4096;
+            }
+
             const response = await fetch(endpoint, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${apiKey}`
                 },
-                body: JSON.stringify({
-                    model: modelId,
-                    messages: [
-                        { role: "system", content: prompt },
-                        { role: "user", content: text }
-                    ],
-                    max_tokens: 4096
-                })
+                body: JSON.stringify(body)
             });
 
             if (!response.ok) {
