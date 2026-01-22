@@ -1,11 +1,16 @@
 export const processImage = (
-    file: File,
+    source: File | Blob | string,
     rotation: number = 0,
-    maxWidth: number = 1024
+    maxWidth: number = 2048
 ): Promise<string> => {
     return new Promise((resolve, reject) => {
         const img = new Image();
-        img.src = URL.createObjectURL(file);
+        if (typeof source === 'string') {
+            img.crossOrigin = "anonymous";
+            img.src = source;
+        } else {
+            img.src = URL.createObjectURL(source);
+        }
         img.onload = () => {
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');

@@ -1,21 +1,30 @@
 import React, { useState, useEffect } from 'react';
 import { Card } from './ui-misc';
 import { Button } from './ui-elements';
-import { Upload, RotateCw, X, ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
+import { Upload, RotateCw, X, ZoomIn, ZoomOut, Maximize2, Link, Globe } from 'lucide-react';
 import { processImage } from '../utils/image';
+import { GBIFService } from '../services/gbif';
+import type { GBIFOccurrence } from '../services/gbif';
 
 interface ImageUploaderProps {
     onImageReady: (base64: string) => void;
+    onGBIFData: (data: GBIFOccurrence | null) => void;
     className?: string;
     currentImage?: string; // If we want to support controlled state fully
 }
 
-export function ImageUploader({ onImageReady, className }: ImageUploaderProps) {
+export function ImageUploader({ onImageReady, onGBIFData, className }: ImageUploaderProps) {
     const [file, setFile] = useState<File | null>(null);
     const [rotation, setRotation] = useState(0);
     const [preview, setPreview] = useState<string | null>(null);
     const [isDragging, setIsDragging] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
+
+    // GBIF State
+    const [mode, setMode] = useState<'upload' | 'gbif'>('upload');
+    const [gbifUrl, setGbifUrl] = useState('');
+    const [fetchingGbif, setFetchingGbif] = useState(false);
+    const [gbifError, setGbifError] = useState<string | null>(null);
 
     // Zoom & Pan state
     const [zoom, setZoom] = useState(1);
@@ -118,7 +127,44 @@ export function ImageUploader({ onImageReady, className }: ImageUploaderProps) {
         setFile(null);
         setPreview(null);
         setRotation(0);
+        setGbifUrl('');
+        setGbifError(null);
         onImageReady('');
+        onGBIFData(null);
+    };
+
+    const handleLoadGbif = async () => {
+        const id = GBIFService.parseOccurrenceId(gbifUrl);
+        if (!id) {
+            setGbifError('Invalid GBIF URL or ID. Please provide a full URL or numeric ID.');
+            return;
+        }
+
+        setFetchingGbif(true);
+        setGbifError(null);
+        try {
+            const occurrence = await GBIFService.fetchOccurrence(id);
+            const imageUrl = GBIFService.extractImage(occurrence);
+
+            if (!imageUrl) {
+                setGbifError('No image found for this specimen in GBIF.');
+                setFetchingGbif(false);
+                return;
+            }
+
+            // Convert image to base64 for local use (prevent CORS issues on Canvas if needed, though img tag is usually fine)
+            // But since handleRun expects base64, we should probably fetch it
+            // Convert image to base64 and process it (resize/compress)
+            const base64 = await processImage(imageUrl, 0);
+            setPreview(base64);
+            onImageReady(base64);
+            onGBIFData(occurrence);
+            setFetchingGbif(false);
+
+        } catch (e: any) {
+            setGbifError(e.message || 'Failed to fetch specimen from GBIF.');
+            setFetchingGbif(false);
+        }
     };
 
     return (
@@ -132,19 +178,68 @@ export function ImageUploader({ onImageReady, className }: ImageUploaderProps) {
             onDrop={onDrop}
         >
             {!preview ? (
-                <label className="flex flex-col items-center justify-center cursor-pointer w-full h-full p-10 hover:bg-slate-800/50 transition-colors rounded-xl group text-center">
-                    <div className="bg-blue-500/10 p-4 rounded-full mb-4 group-hover:bg-blue-500/20 transition-colors">
-                        <Upload size={32} className="text-blue-500" />
+                <div className="w-full h-full flex flex-col">
+                    <div className="flex gap-2 mb-6 justify-center">
+                        <Button
+                            variant={mode === 'upload' ? 'primary' : 'secondary'}
+                            onClick={() => setMode('upload')}
+                            size="sm"
+                        >
+                            <Upload size={16} className="mr-2" /> Upload File
+                        </Button>
+                        <Button
+                            variant={mode === 'gbif' ? 'primary' : 'secondary'}
+                            onClick={() => setMode('gbif')}
+                            size="sm"
+                        >
+                            <Globe size={16} className="mr-2" /> GBIF Link
+                        </Button>
                     </div>
-                    <p className="text-lg font-medium text-slate-200">Click or drag image to upload</p>
-                    <p className="text-sm text-slate-500 mt-2">Supports JPG, PNG, WEBP</p>
-                    <input
-                        type="file"
-                        className="hidden"
-                        accept="image/*"
-                        onChange={handleFileChange}
-                    />
-                </label>
+
+                    {mode === 'upload' ? (
+                        <label className="flex-1 flex flex-col items-center justify-center cursor-pointer w-full p-10 hover:bg-slate-800/50 transition-colors rounded-xl group text-center border-2 border-dashed border-slate-700">
+                            <div className="bg-blue-500/10 p-4 rounded-full mb-4 group-hover:bg-blue-500/20 transition-colors">
+                                <Upload size={32} className="text-blue-500" />
+                            </div>
+                            <p className="text-lg font-medium text-slate-200">Click or drag image to upload</p>
+                            <p className="text-sm text-slate-500 mt-2">Supports JPG, PNG, WEBP</p>
+                            <input
+                                type="file"
+                                className="hidden"
+                                accept="image/*"
+                                onChange={handleFileChange}
+                            />
+                        </label>
+                    ) : (
+                        <div className="flex-1 flex flex-col items-center justify-center w-full p-10 space-y-4">
+                            <div className="bg-emerald-500/10 p-4 rounded-full">
+                                <Link size={32} className="text-emerald-500" />
+                            </div>
+                            <div className="w-full max-w-md space-y-2">
+                                <p className="text-lg font-medium text-slate-200 text-center">Load Specimen from GBIF</p>
+                                <div className="flex gap-2">
+                                    <input
+                                        type="text"
+                                        placeholder="Paste GBIF occurrence URL or ID..."
+                                        className="flex-1 bg-slate-950/50 border border-slate-700 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                                        value={gbifUrl}
+                                        onChange={(e) => setGbifUrl(e.target.value)}
+                                        onKeyDown={(e) => e.key === 'Enter' && handleLoadGbif()}
+                                    />
+                                    <Button
+                                        onClick={handleLoadGbif}
+                                        disabled={fetchingGbif || !gbifUrl}
+                                        size="sm"
+                                    >
+                                        {fetchingGbif ? 'Loading...' : 'Load'}
+                                    </Button>
+                                </div>
+                                {gbifError && <p className="text-xs text-red-400 mt-2">{gbifError}</p>}
+                                <p className="text-[10px] text-slate-500 text-center uppercase tracking-widest mt-4">Example: https://www.gbif.org/occurrence/2432617679</p>
+                            </div>
+                        </div>
+                    )}
+                </div>
             ) : (
                 <div className="relative w-full h-full flex flex-col">
                     {/* Image Viewport */}

@@ -11,6 +11,7 @@ import { Settings as SettingsIcon, History as HistoryIcon, Play, Github } from '
 import { useSettings } from './hooks/useSettings';
 import { LLMService } from './services/llm';
 import { StorageService, type TranscribedItem } from './services/storage';
+import type { GBIFOccurrence } from './services/gbif';
 
 function App() {
   const { settings } = useSettings();
@@ -20,7 +21,7 @@ function App() {
   // Error State
   const [errorState, setErrorState] = useState<{
     error: Error | null;
-    context: { provider: string; model: string; stage: 'transcription' | 'standardization'; prompt: string; rawError: any } | null;
+    context: { provider: string; model: string; stage: 'transcription' | 'standardization'; prompt: string; rawError: any; gbifData?: GBIFOccurrence } | null;
   }>({ error: null, context: null });
 
   // Workflow State
@@ -45,6 +46,7 @@ function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [step, setStep] = useState(0); // 1 = transcribing, 2 = standardizing
   const [historyTrigger, setHistoryTrigger] = useState(0);
+  const [gbifData, setGbifData] = useState<GBIFOccurrence | null>(null);
 
   // Auto-save session
   useEffect(() => {
@@ -130,7 +132,8 @@ function App() {
           model,
           stage,
           prompt: isStep1 ? prompt1 : prompt2,
-          rawError: e // Pass the raw object for inspection
+          rawError: e, // Pass the raw object for inspection
+          gbifData: gbifData || undefined
         }
       });
     } finally {
@@ -189,7 +192,11 @@ function App() {
                 Input Image
               </h2>
             </div>
-            <ImageUploader onImageReady={setImage} className="flex-1 min-h-[600px]" />
+            <ImageUploader
+              onImageReady={setImage}
+              onGBIFData={setGbifData}
+              className="flex-1"
+            />
           </div>
 
           {/* Right Column: Config & Action (6 cols) */}
@@ -250,6 +257,7 @@ function App() {
             step2Result={result2}
             isLoading={isLoading}
             currentStep={step}
+            gbifData={gbifData || undefined}
           />
         </div>
 

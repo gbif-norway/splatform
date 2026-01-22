@@ -1,16 +1,18 @@
 import { Card } from './ui-misc';
 import { Button } from './ui-elements';
-import { Copy, Check, AlertTriangle, FileJson, FileText } from 'lucide-react';
+import { Copy, Check, AlertTriangle, FileJson, FileText, ArrowRight } from 'lucide-react';
 import { useState, useMemo } from 'react';
+import type { GBIFOccurrence } from '../services/gbif';
 
 interface ResultTableProps {
     step1Result: string;
     step2Result: string;
     isLoading: boolean;
     currentStep: number;
+    gbifData?: GBIFOccurrence;
 }
 
-export function ResultTable({ step1Result, step2Result, isLoading, currentStep }: ResultTableProps) {
+export function ResultTable({ step1Result, step2Result, isLoading, currentStep, gbifData }: ResultTableProps) {
     const [copied, setCopied] = useState<string | null>(null);
     const [showRaw, setShowRaw] = useState(false);
 
@@ -124,6 +126,59 @@ export function ResultTable({ step1Result, step2Result, isLoading, currentStep }
                     )}
                 </div>
             </Card>
+
+            {/* Comparison Section (Full Width) */}
+            {gbifData && step2Result && isValidJson && (
+                <Card className="md:col-span-2 p-6 bg-slate-900/60 border-emerald-500/20 shadow-lg overflow-hidden">
+                    <div className="flex items-center gap-2 mb-6 pb-2 border-b border-white/5">
+                        <ArrowRight className="text-emerald-500" size={20} />
+                        <h3 className="text-lg font-bold text-slate-100">Comparison: AI Result vs. Official GBIF Data</h3>
+                    </div>
+
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                            <thead>
+                                <tr className="text-left border-b border-slate-700">
+                                    <th className="pb-3 font-semibold text-slate-400 w-1/4">Term</th>
+                                    <th className="pb-3 font-semibold text-blue-400 w-3/8">AI Extracted</th>
+                                    <th className="pb-3 font-semibold text-emerald-400 w-3/8">GBIF Official</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-800">
+                                {[
+                                    { term: 'Scientific Name', key: 'dwc:scientificName', gbif: gbifData.scientificName },
+                                    { term: 'Event Date', key: 'dwc:eventDate', gbif: gbifData.eventDate },
+                                    { term: 'Country', key: 'dwc:country', gbif: gbifData.country },
+                                    { term: 'Locality', key: 'dwc:locality', gbif: gbifData.locality },
+                                    { term: 'Recorded By', key: 'dwc:recordedBy', gbif: gbifData.recordedBy },
+                                    { term: 'Catalog Number', key: 'dwc:catalogNumber', gbif: gbifData.catalogNumber },
+                                    { term: 'Institution Code', key: 'dwc:institutionCode', gbif: gbifData.institutionCode },
+                                    { term: 'Collection Code', key: 'dwc:collectionCode', gbif: gbifData.collectionCode },
+                                ].map((row) => {
+                                    const aiVal = parsedJson[row.key] || parsedJson[row.key.replace('dwc:', '')] || '-';
+                                    const gbifVal = row.gbif || '-';
+                                    const isMatch = aiVal.toString().toLowerCase() === gbifVal.toString().toLowerCase();
+
+                                    return (
+                                        <tr key={row.key} className="group hover:bg-slate-800/30 transition-colors">
+                                            <td className="py-3 font-mono text-xs text-slate-500 group-hover:text-slate-300">
+                                                {row.key}
+                                                <div className="text-[10px] text-slate-600 mt-0.5">{row.term}</div>
+                                            </td>
+                                            <td className={`py-3 pr-4 align-top ${!isMatch && aiVal !== '-' ? 'text-blue-300' : 'text-slate-300'}`}>
+                                                {aiVal}
+                                            </td>
+                                            <td className={`py-3 align-top ${!isMatch && gbifVal !== '-' ? 'text-emerald-300' : 'text-slate-300'}`}>
+                                                {gbifVal}
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
+                </Card>
+            )}
         </div>
     );
 }
