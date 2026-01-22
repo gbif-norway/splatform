@@ -48,7 +48,7 @@ export const OpenAIProvider: LLMProvider = {
             const baseUrl = 'https://api.openai.com/v1/chat/completions';
             const endpoint = proxyUrl ? `${proxyUrl}/${baseUrl}` : baseUrl;
 
-            const isReasoning = modelId.startsWith('o1') || modelId.startsWith('o3');
+            const isModern = modelId.includes('o1') || modelId.includes('o3') || modelId.includes('gpt-4o') || modelId.includes('gpt-5') || modelId.includes('chat-latest');
             // Some newer models require max_completion_tokens. 
             // We'll use it for reasoning models and try to stick to max_tokens for others unless we know better.
             // User reported gpt-4o failing with max_tokens? That might be a specific version or alias behavior.
@@ -75,7 +75,7 @@ export const OpenAIProvider: LLMProvider = {
                 ]
             };
 
-            if (isReasoning) {
+            if (isModern) {
                 body.max_completion_tokens = 4096;
             } else {
                 body.max_tokens = 4096;
@@ -108,7 +108,7 @@ export const OpenAIProvider: LLMProvider = {
             const baseUrl = 'https://api.openai.com/v1/chat/completions';
             const endpoint = proxyUrl ? `${proxyUrl}/${baseUrl}` : baseUrl;
 
-            const isReasoning = modelId.startsWith('o1') || modelId.startsWith('o3');
+            const isModern = modelId.includes('o1') || modelId.includes('o3') || modelId.includes('gpt-4o') || modelId.includes('gpt-5') || modelId.includes('chat-latest');
 
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const body: any = {
@@ -119,7 +119,7 @@ export const OpenAIProvider: LLMProvider = {
                 ]
             };
 
-            if (isReasoning) {
+            if (isModern) {
                 body.max_completion_tokens = 4096;
             } else {
                 body.max_tokens = 4096;

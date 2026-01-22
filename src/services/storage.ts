@@ -77,5 +77,16 @@ export const StorageService = {
 
     clearHistory: () => {
         localStorage.removeItem(HISTORY_KEY);
+    },
+
+    getRecentState: () => {
+        try {
+            const data = localStorage.getItem('slpat_session');
+            return data ? JSON.parse(data) : null;
+        } catch { return null; }
+    },
+
+    saveRecentState: (state: any) => {
+        localStorage.setItem('slpat_session', JSON.stringify(state));
     }
 };

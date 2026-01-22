@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Settings } from './components/Settings';
 import { ImageUploader } from './components/ImageUploader';
 import { PromptConfig } from './components/PromptConfig';
@@ -24,15 +24,20 @@ function App() {
   }>({ error: null, context: null });
 
   // Workflow State
+  // Workflow State
   const [image, setImage] = useState<string>('');
 
-  const [prompt1, setPrompt1] = useState("You are an experienced biologist specializing in describing herbarium specimens. You have a keen eye for detail and can describe specimens very accurately. Your task is to extract all information from the provided image of a herbarium specimen and create a short description containing all information from the image. Do not provide information on higher taxonomy beyond kingdom. Perform a literal transcription of all text visible on the specimen's label. The text on the label is handwritten.");
-  const [provider1, setProvider1] = useState('openai');
-  const [model1, setModel1] = useState('gpt-4o');
+  // NOTE: Initial state must come from localStorage immediately if possible, or use useEffect to hydrate
+  // But useState initializer is better.
+  const stored = StorageService.getRecentState();
 
-  const [prompt2, setPrompt2] = useState("Standardize the provided information about a preserved specimen into a JSON object using exclusively valid Darwin Core terms. The JSON structure should follow: { \"dwc:scientificName\": \"Value\", \"dwc:locality\": \"Value\", ... }.");
-  const [provider2, setProvider2] = useState('openai');
-  const [model2, setModel2] = useState('gpt-4o');
+  const [prompt1, setPrompt1] = useState(stored?.prompt1 || "You are an experienced biologist specializing in describing herbarium specimens. You have a keen eye for detail and can describe specimens very accurately. Your task is to extract all information from the provided image of a herbarium specimen and create a short description containing all information from the image. Do not provide information on higher taxonomy beyond kingdom. Perform a literal transcription of all text visible on the specimen's label. The text on the label is handwritten.");
+  const [provider1, setProvider1] = useState(stored?.provider1 || 'openai');
+  const [model1, setModel1] = useState(stored?.model1 || 'gpt-4o');
+
+  const [prompt2, setPrompt2] = useState(stored?.prompt2 || "Standardize the provided information about a preserved specimen into a JSON object using exclusively valid Darwin Core terms. The JSON structure should follow: { \"dwc:scientificName\": \"Value\", \"dwc:locality\": \"Value\", ... }.");
+  const [provider2, setProvider2] = useState(stored?.provider2 || 'openai');
+  const [model2, setModel2] = useState(stored?.model2 || 'gpt-4o');
 
   const [result1, setResult1] = useState('');
   const [result2, setResult2] = useState('');
@@ -40,6 +45,14 @@ function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [step, setStep] = useState(0); // 1 = transcribing, 2 = standardizing
   const [historyTrigger, setHistoryTrigger] = useState(0);
+
+  // Auto-save session
+  useEffect(() => {
+    StorageService.saveRecentState({
+      prompt1, provider1, model1,
+      prompt2, provider2, model2
+    });
+  }, [prompt1, provider1, model1, prompt2, provider2, model2]);
 
   const handleRun = async () => {
     if (!image) {
@@ -65,9 +78,12 @@ function App() {
     setResult1('');
     setResult2('');
 
+    let currentPhase: 'transcription' | 'standardization' = 'transcription';
+
     try {
       // Step 1
       setStep(1);
+      currentPhase = 'transcription';
       const provider1Inst = LLMService.getProvider(provider1);
       // Fallback model if empty
       const m1 = model1 || (provider1 === 'openai' ? 'gpt-4o' : provider1 === 'gemini' ? 'gemini-1.5-flash' : provider1 === 'anthropic' ? 'claude-3-5-sonnet-20240620' : 'grok-vision-beta');
@@ -77,6 +93,7 @@ function App() {
 
       // Step 2
       setStep(2);
+      currentPhase = 'standardization';
       const provider2Inst = LLMService.getProvider(provider2);
       const m2 = model2 || (provider2 === 'openai' ? 'gpt-4o' : provider2 === 'gemini' ? 'gemini-1.5-flash' : provider2 === 'anthropic' ? 'claude-3-5-sonnet-20240620' : 'grok-vision-beta');
 
@@ -100,11 +117,11 @@ function App() {
 
     } catch (e: any) {
       console.error(e);
-      // Determine context based on current step
-      const isStep1 = step === 1;
+      // Determine context based on local variable phase
+      const isStep1 = currentPhase === 'transcription';
       const provider = isStep1 ? provider1 : provider2;
       const model = isStep1 ? (model1 || 'gpt-4o') : (model2 || 'gpt-4o');
-      const stage = isStep1 ? 'transcription' : 'standardization';
+      const stage = currentPhase;
 
       setErrorState({
         error: e instanceof Error ? e : new Error(String(e)),

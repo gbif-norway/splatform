@@ -1,3 +1,4 @@
+import { LLMService } from '../services/llm';
 import { useState } from 'react';
 import { useSettings } from '../hooks/useSettings';
 import { Input, Label, Button } from './ui-elements';
@@ -30,17 +31,15 @@ export function Settings({ onClose }: { onClose?: () => void }) {
         setValidationStatus(prev => ({ ...prev, [fieldId]: null }));
 
         try {
-            await import('../services/llm').then(async (module) => {
-                const provider = module.LLMService.getProvider(providerId);
-                // Try to list models as a lightweight test
-                const models = await provider.listModels(apiKey as string, keys.proxyUrl);
-                if (models.length > 0) {
-                    setValidationStatus(prev => ({ ...prev, [fieldId]: 'success' }));
-                } else {
-                    // Some providers might return empty list but valid connection, but usually not.
-                    setValidationStatus(prev => ({ ...prev, [fieldId]: 'success' }));
-                }
-            });
+            const provider = LLMService.getProvider(providerId);
+            // Try to list models as a lightweight test
+            const models = await provider.listModels(apiKey as string, keys.proxyUrl);
+            if (models.length > 0) {
+                setValidationStatus(prev => ({ ...prev, [fieldId]: 'success' }));
+            } else {
+                // Some providers might return empty list but valid connection, but usually not.
+                setValidationStatus(prev => ({ ...prev, [fieldId]: 'success' }));
+            }
         } catch (e) {
             console.error(e);
             setValidationStatus(prev => ({ ...prev, [fieldId]: 'error' }));
