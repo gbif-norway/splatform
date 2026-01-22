@@ -5,6 +5,7 @@ import { ImageUploader } from './components/ImageUploader';
 import { PromptConfig } from './components/PromptConfig';
 import { ResultTable } from './components/ResultTable';
 import { History } from './components/History';
+import { ErrorDisplay } from './components/ErrorDisplay';
 import { Button } from './components/ui-elements';
 import { Settings as SettingsIcon, History as HistoryIcon, Play, Github } from 'lucide-react';
 import { useSettings } from './hooks/useSettings';
@@ -15,6 +16,12 @@ function App() {
   const { settings } = useSettings();
   const [showSettings, setShowSettings] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+
+  // Error State
+  const [errorState, setErrorState] = useState<{
+    error: Error | null;
+    context: { provider: string; model: string; stage: 'transcription' | 'standardization'; prompt: string; rawError: any } | null;
+  }>({ error: null, context: null });
 
   // Workflow State
   const [image, setImage] = useState<string>('');
@@ -92,8 +99,23 @@ function App() {
       setHistoryTrigger(prev => prev + 1);
 
     } catch (e: any) {
-      alert(`Error: ${e.message}`);
       console.error(e);
+      // Determine context based on current step
+      const isStep1 = step === 1;
+      const provider = isStep1 ? provider1 : provider2;
+      const model = isStep1 ? (model1 || 'gpt-4o') : (model2 || 'gpt-4o');
+      const stage = isStep1 ? 'transcription' : 'standardization';
+
+      setErrorState({
+        error: e instanceof Error ? e : new Error(String(e)),
+        context: {
+          provider,
+          model,
+          stage,
+          prompt: isStep1 ? prompt1 : prompt2,
+          rawError: e // Pass the raw object for inspection
+        }
+      });
     } finally {
       setIsLoading(false);
       setStep(0);
@@ -217,6 +239,12 @@ function App() {
       </main>
 
       {/* Modals/Sidebars */}
+      <ErrorDisplay
+        error={errorState.error}
+        context={errorState.context}
+        onClose={() => setErrorState({ error: null, context: null })}
+      />
+
       {showSettings && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowSettings(false)}>
           <div onClick={e => e.stopPropagation()} className="w-full max-w-2xl">
