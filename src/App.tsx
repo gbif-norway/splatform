@@ -19,11 +19,11 @@ function App() {
   // Workflow State
   const [image, setImage] = useState<string>('');
 
-  const [prompt1, setPrompt1] = useState("Transcribe all the text from this image faithfully. If there are tables, represent them as Markdown tables. Ignore barcode numbers if possible.");
+  const [prompt1, setPrompt1] = useState("You are an experienced biologist specializing in describing herbarium specimens. You have a keen eye for detail and can describe specimens very accurately. Your task is to extract all information from the provided image of a herbarium specimen and create a short description containing all information from the image. Do not provide information on higher taxonomy beyond kingdom. Perform a literal transcription of all text visible on the specimen's label. The text on the label is handwritten.");
   const [provider1, setProvider1] = useState('openai');
   const [model1, setModel1] = useState('gpt-4o');
 
-  const [prompt2, setPrompt2] = useState("Standardize this text to Darwin Core (DWC) JSON format. Return ONLY the JSON object, no markdown fencing.");
+  const [prompt2, setPrompt2] = useState("Standardize the provided information about a preserved specimen into a JSON object using exclusively valid Darwin Core terms. The JSON structure should follow: { \"dwc:scientificName\": \"Value\", \"dwc:locality\": \"Value\", ... }.");
   const [provider2, setProvider2] = useState('openai');
   const [model2, setModel2] = useState('gpt-4o');
 
