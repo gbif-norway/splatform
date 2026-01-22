@@ -17,6 +17,38 @@ export function Settings({ onClose }: { onClose?: () => void }) {
         setShowKeys(prev => ({ ...prev, [key]: !prev[key] }));
     };
 
+    const [validating, setValidating] = useState<Record<string, boolean>>({});
+    const [validationStatus, setValidationStatus] = useState<Record<string, 'success' | 'error' | null>>({});
+
+    const handleValidate = async (fieldId: string) => {
+        const providerId = fieldId.replace('Key', '');
+        const apiKey = keys[fieldId as keyof typeof keys];
+
+        if (!apiKey) return;
+
+        setValidating(prev => ({ ...prev, [fieldId]: true }));
+        setValidationStatus(prev => ({ ...prev, [fieldId]: null }));
+
+        try {
+            await import('../services/llm').then(async (module) => {
+                const provider = module.LLMService.getProvider(providerId);
+                // Try to list models as a lightweight test
+                const models = await provider.listModels(apiKey as string, keys.proxyUrl);
+                if (models.length > 0) {
+                    setValidationStatus(prev => ({ ...prev, [fieldId]: 'success' }));
+                } else {
+                    // Some providers might return empty list but valid connection, but usually not.
+                    setValidationStatus(prev => ({ ...prev, [fieldId]: 'success' }));
+                }
+            });
+        } catch (e) {
+            console.error(e);
+            setValidationStatus(prev => ({ ...prev, [fieldId]: 'error' }));
+        } finally {
+            setValidating(prev => ({ ...prev, [fieldId]: false }));
+        }
+    };
+
     const handleSave = () => {
         saveSettings(keys);
         if (onClose) onClose();
@@ -39,23 +71,42 @@ export function Settings({ onClose }: { onClose?: () => void }) {
                 ].map((field) => (
                     <div key={field.id} className="space-y-1">
                         <Label htmlFor={field.id}>{field.label}</Label>
-                        <div className="relative">
-                            <Input
-                                id={field.id}
-                                type={showKeys[field.id] ? "text" : "password"}
-                                value={keys[field.id as keyof typeof keys]}
-                                onChange={(e) => handleChange(field.id as keyof typeof keys, e.target.value)}
-                                placeholder={field.placeholder}
-                                className="pr-10"
-                            />
-                            <button
-                                type="button"
-                                onClick={() => toggleShow(field.id)}
-                                className="absolute right-3 top-2.5 text-slate-500 hover:text-slate-300"
+                        <div className="relative flex gap-2">
+                            <div className="relative flex-grow">
+                                <Input
+                                    id={field.id}
+                                    type={showKeys[field.id] ? "text" : "password"}
+                                    value={keys[field.id as keyof typeof keys]}
+                                    onChange={(e) => handleChange(field.id as keyof typeof keys, e.target.value)}
+                                    placeholder={field.placeholder}
+                                    className="pr-10"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => toggleShow(field.id)}
+                                    className="absolute right-3 top-2.5 text-slate-500 hover:text-slate-300"
+                                >
+                                    {showKeys[field.id] ? <EyeOff size={16} /> : <Eye size={16} />}
+                                </button>
+                            </div>
+                            <Button
+                                variant="secondary"
+                                className="px-3"
+                                onClick={() => handleValidate(field.id)}
+                                disabled={validating[field.id] || !keys[field.id as keyof typeof keys]}
+                                title="Test connection"
                             >
-                                {showKeys[field.id] ? <EyeOff size={16} /> : <Eye size={16} />}
-                            </button>
+                                {validating[field.id] ? (
+                                    <div className="w-4 h-4 border-2 border-slate-400 border-t-transparent rounded-full animate-spin"></div>
+                                ) : (
+                                    <span className={validationStatus[field.id] === 'success' ? 'text-emerald-400' : validationStatus[field.id] === 'error' ? 'text-red-400' : 'text-slate-400'}>
+                                        Test
+                                    </span>
+                                )}
+                            </Button>
                         </div>
+                        {validationStatus[field.id] === 'success' && <p className="text-xs text-emerald-400">Connection successful!</p>}
+                        {validationStatus[field.id] === 'error' && <p className="text-xs text-red-400">Connection failed. Check key or proxy settings.</p>}
                     </div>
                 ))}
             </div>

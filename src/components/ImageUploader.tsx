@@ -14,7 +14,31 @@ export function ImageUploader({ onImageReady, className }: ImageUploaderProps) {
     const [file, setFile] = useState<File | null>(null);
     const [rotation, setRotation] = useState(0);
     const [preview, setPreview] = useState<string | null>(null);
+    const [isDragging, setIsDragging] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
+
+    // Handle Drag & Drop
+    const onDragOver = (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragging(true);
+    };
+
+    const onDragLeave = (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragging(false);
+    };
+
+    const onDrop = (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragging(false);
+        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+            const file = e.dataTransfer.files[0];
+            if (file.type.startsWith('image/')) {
+                setFile(file);
+                setRotation(0);
+            }
+        }
+    };
 
     // Handle file selection
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -61,7 +85,15 @@ export function ImageUploader({ onImageReady, className }: ImageUploaderProps) {
     };
 
     return (
-        <Card className={`p-6 flex flex-col items-center justify-center border-dashed border-2 border-slate-700 min-h-[300px] bg-slate-900/40 ${className}`}>
+        <Card
+            className={`p-6 flex flex-col items-center justify-center border-dashed border-2 min-h-[300px] transition-colors ${isDragging
+                ? 'border-blue-500 bg-blue-500/10'
+                : 'border-slate-700 bg-slate-900/40'
+                } ${className}`}
+            onDragOver={onDragOver}
+            onDragLeave={onDragLeave}
+            onDrop={onDrop}
+        >
             {!preview ? (
                 <label className="flex flex-col items-center justify-center cursor-pointer w-full h-full p-10 hover:bg-slate-800/50 transition-colors rounded-xl group text-center">
                     <div className="bg-blue-500/10 p-4 rounded-full mb-4 group-hover:bg-blue-500/20 transition-colors">
