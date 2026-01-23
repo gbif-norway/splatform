@@ -1,4 +1,4 @@
-import { type LLMProvider, type LLMModel, LLMError } from './types';
+import { type LLMProvider, type LLMModel, type LLMOptions, LLMError } from './types';
 
 export const OpenAIProvider: LLMProvider = {
     id: 'openai',
@@ -43,7 +43,7 @@ export const OpenAIProvider: LLMProvider = {
         }
     },
 
-    generateTranscription: async (apiKey: string, modelId: string, imageBase64: string, prompt: string, proxyUrl?: string): Promise<string> => {
+    generateTranscription: async (apiKey: string, modelId: string, imageBase64: string, prompt: string, proxyUrl?: string, options?: LLMOptions): Promise<string> => {
         try {
             const baseUrl = 'https://api.openai.com/v1/chat/completions';
             const endpoint = proxyUrl ? `${proxyUrl}/${baseUrl}` : baseUrl;
@@ -75,6 +75,10 @@ export const OpenAIProvider: LLMProvider = {
                 ]
             };
 
+            if (options?.temperature !== undefined) {
+                body.temperature = options.temperature;
+            }
+
             if (isModern) {
                 body.max_completion_tokens = 4096;
             } else {
@@ -103,7 +107,7 @@ export const OpenAIProvider: LLMProvider = {
         }
     },
 
-    standardizeText: async (apiKey: string, modelId: string, text: string, prompt: string, proxyUrl?: string): Promise<string> => {
+    standardizeText: async (apiKey: string, modelId: string, text: string, prompt: string, proxyUrl?: string, options?: LLMOptions): Promise<string> => {
         try {
             const baseUrl = 'https://api.openai.com/v1/chat/completions';
             const endpoint = proxyUrl ? `${proxyUrl}/${baseUrl}` : baseUrl;
@@ -118,6 +122,10 @@ export const OpenAIProvider: LLMProvider = {
                     { role: "user", content: text }
                 ]
             };
+
+            if (options?.temperature !== undefined) {
+                body.temperature = options.temperature;
+            }
 
             if (isModern) {
                 body.max_completion_tokens = 4096;

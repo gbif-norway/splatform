@@ -42,6 +42,9 @@ function App() {
   const [provider2, setProvider2] = useState(stored?.provider2 || 'openai');
   const [model2, setModel2] = useState(stored?.model2 || 'gpt-4o');
 
+  const [temp1, setTemp1] = useState(stored?.temp1 ?? 0);
+  const [temp2, setTemp2] = useState(stored?.temp2 ?? 0);
+
   const [result1, setResult1] = useState('');
   const [result2, setResult2] = useState('');
 
@@ -53,10 +56,10 @@ function App() {
   // Auto-save session
   useEffect(() => {
     StorageService.saveRecentState({
-      prompt1, provider1, model1,
-      prompt2, provider2, model2
+      prompt1, provider1, model1, temp1,
+      prompt2, provider2, model2, temp2
     });
-  }, [prompt1, provider1, model1, prompt2, provider2, model2]);
+  }, [prompt1, provider1, model1, temp1, prompt2, provider2, model2, temp2]);
 
   const handleRun = async () => {
     if (!image) {
@@ -92,7 +95,7 @@ function App() {
       // Fallback model if empty
       const m1 = model1 || (provider1 === 'openai' ? 'gpt-4o' : provider1 === 'gemini' ? 'gemini-1.5-flash' : provider1 === 'anthropic' ? 'claude-3-5-sonnet-20240620' : 'grok-vision-beta');
 
-      const r1 = await provider1Inst.generateTranscription(p1Key, m1, image, prompt1, settings.proxyUrl);
+      const r1 = await provider1Inst.generateTranscription(p1Key, m1, image, prompt1, settings.proxyUrl, { temperature: temp1 });
       setResult1(r1);
 
       // Step 2
@@ -101,7 +104,7 @@ function App() {
       const provider2Inst = LLMService.getProvider(provider2);
       const m2 = model2 || (provider2 === 'openai' ? 'gpt-4o' : provider2 === 'gemini' ? 'gemini-1.5-flash' : provider2 === 'anthropic' ? 'claude-3-5-sonnet-20240620' : 'grok-vision-beta');
 
-      const r2 = await provider2Inst.standardizeText((settings as any)[`${provider2}Key`] || p1Key, m2, r1, prompt2, settings.proxyUrl);
+      const r2 = await provider2Inst.standardizeText((settings as any)[`${provider2}Key`] || p1Key, m2, r1, prompt2, settings.proxyUrl, { temperature: temp2 });
       setResult2(r2);
 
       // Save History
@@ -114,7 +117,9 @@ function App() {
         prompt2,
         result2: r2,
         provider1: `${provider1}/${m1}`,
+        temp1,
         provider2: `${provider2}/${m2}`,
+        temp2,
       };
       StorageService.addToHistory(item);
       setHistoryTrigger(prev => prev + 1);
@@ -149,6 +154,8 @@ function App() {
     setPrompt2(item.prompt2);
     setResult1(item.result1);
     setResult2(item.result2);
+    if (item.temp1 !== undefined) setTemp1(item.temp1);
+    if (item.temp2 !== undefined) setTemp2(item.temp2);
   };
 
   return (
@@ -223,6 +230,8 @@ function App() {
                 setSelectedModel={setModel1}
                 selectedProvider={provider1}
                 setSelectedProvider={setProvider1}
+                temperature={temp1}
+                setTemperature={setTemp1}
               />
               <PromptConfig
                 step={2}
@@ -232,6 +241,8 @@ function App() {
                 setSelectedModel={setModel2}
                 selectedProvider={provider2}
                 setSelectedProvider={setProvider2}
+                temperature={temp2}
+                setTemperature={setTemp2}
               />
             </div>
 

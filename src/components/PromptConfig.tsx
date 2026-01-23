@@ -11,6 +11,8 @@ interface PromptConfigProps {
     setSelectedModel: (val: string) => void;
     selectedProvider: string;
     setSelectedProvider: (val: string) => void;
+    temperature: number;
+    setTemperature: (val: number) => void;
 }
 
 export function PromptConfig({
@@ -20,7 +22,9 @@ export function PromptConfig({
     selectedModel,
     setSelectedModel,
     selectedProvider,
-    setSelectedProvider
+    setSelectedProvider,
+    temperature,
+    setTemperature
 }: PromptConfigProps) {
     const { models } = useModels();
 
@@ -80,6 +84,28 @@ export function PromptConfig({
                     placeholder={step === 1 ? "Example: Transcribe all text..." : "Example: Standardize to DWC JSON..."}
                     className="min-h-[100px] font-mono text-sm"
                 />
+            </div>
+
+            <div className="space-y-3 pt-2">
+                <div className="flex items-center justify-between">
+                    <Label className="mb-0">Model Temperature</Label>
+                    <span className="text-xs font-mono bg-surface px-2 py-0.5 rounded border border-border text-primary">{temperature.toFixed(2)}</span>
+                </div>
+                <div className="flex gap-4 items-center">
+                    <input
+                        type="range"
+                        min="0"
+                        max="1"
+                        step="0.05"
+                        value={temperature}
+                        onChange={(e) => setTemperature(parseFloat(e.target.value))}
+                        className="flex-1 accent-primary bg-surface h-1.5 rounded-lg appearance-none cursor-pointer border border-border"
+                    />
+                    <div className="flex justify-between w-full text-[10px] text-foreground-muted uppercase tracking-tighter absolute -bottom-5">
+                        <span>Focused</span>
+                        <span>Creative</span>
+                    </div>
+                </div>
             </div>
         </Card>
     );

@@ -13,7 +13,9 @@ export interface TranscribedItem {
     prompt2: string;
     result2: string;
     provider1: string; // "openai/gpt-4o"
+    temp1: number;
     provider2: string;
+    temp2: number;
 }
 
 export interface AppSettings {

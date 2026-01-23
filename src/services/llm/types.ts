@@ -4,6 +4,10 @@ export interface LLMModel {
     provider: 'openai' | 'gemini' | 'anthropic' | 'xai';
 }
 
+export interface LLMOptions {
+    temperature?: number;
+}
+
 export interface LLMProvider {
     id: string;
     name: string;
@@ -13,10 +17,10 @@ export interface LLMProvider {
 
     // Step 1: Transcription
     // Image is passed as a base64 string (including data URI prefix)
-    generateTranscription(apiKey: string, modelId: string, imageBase64: string, prompt: string, proxyUrl?: string): Promise<string>;
+    generateTranscription(apiKey: string, modelId: string, imageBase64: string, prompt: string, proxyUrl?: string, options?: LLMOptions): Promise<string>;
 
     // Step 2: Standardization
-    standardizeText(apiKey: string, modelId: string, text: string, prompt: string, proxyUrl?: string): Promise<string>;
+    standardizeText(apiKey: string, modelId: string, text: string, prompt: string, proxyUrl?: string, options?: LLMOptions): Promise<string>;
 }
 
 export class LLMError extends Error {

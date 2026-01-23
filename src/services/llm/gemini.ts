@@ -1,4 +1,4 @@
-import { type LLMProvider, type LLMModel, LLMError } from './types';
+import { type LLMProvider, type LLMModel, type LLMOptions, LLMError } from './types';
 
 export const GeminiProvider: LLMProvider = {
     id: 'gemini',
@@ -44,7 +44,7 @@ export const GeminiProvider: LLMProvider = {
         }
     },
 
-    generateTranscription: async (apiKey: string, modelId: string, imageBase64: string, prompt: string, proxyUrl?: string): Promise<string> => {
+    generateTranscription: async (apiKey: string, modelId: string, imageBase64: string, prompt: string, proxyUrl?: string, options?: LLMOptions): Promise<string> => {
         // imageBase64 is data:image/jpeg;base64,.... we need to strip preamble
         const match = imageBase64.match(/^data:(.+);base64,(.+)$/);
         if (!match) throw new LLMError("Invalid image format", 'gemini');
@@ -66,7 +66,10 @@ export const GeminiProvider: LLMProvider = {
                             { text: prompt },
                             { inline_data: { mime_type: mimeType, data: data } }
                         ]
-                    }]
+                    }],
+                    generationConfig: options?.temperature !== undefined ? {
+                        temperature: options.temperature
+                    } : undefined
                 })
             });
 
@@ -83,7 +86,7 @@ export const GeminiProvider: LLMProvider = {
         }
     },
 
-    standardizeText: async (apiKey: string, modelId: string, text: string, prompt: string, proxyUrl?: string): Promise<string> => {
+    standardizeText: async (apiKey: string, modelId: string, text: string, prompt: string, proxyUrl?: string, options?: LLMOptions): Promise<string> => {
         try {
             const baseUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${apiKey}`;
             const endpoint = proxyUrl ? `${proxyUrl}/${baseUrl}` : baseUrl;
@@ -100,7 +103,10 @@ export const GeminiProvider: LLMProvider = {
                             // We will put prompt first then text.
                             { text: `${prompt}\n\nHere is the text to standardize:\n${text}` }
                         ]
-                    }]
+                    }],
+                    generationConfig: options?.temperature !== undefined ? {
+                        temperature: options.temperature
+                    } : undefined
                 })
             });
 

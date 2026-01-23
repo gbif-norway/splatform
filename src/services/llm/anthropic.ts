@@ -1,4 +1,4 @@
-import { type LLMProvider, type LLMModel, LLMError } from './types';
+import { type LLMProvider, type LLMModel, type LLMOptions, LLMError } from './types';
 
 export const AnthropicProvider: LLMProvider = {
     id: 'anthropic',
@@ -50,7 +50,7 @@ export const AnthropicProvider: LLMProvider = {
         }
     },
 
-    generateTranscription: async (apiKey: string, modelId: string, imageBase64: string, prompt: string, proxyUrl?: string): Promise<string> => {
+    generateTranscription: async (apiKey: string, modelId: string, imageBase64: string, prompt: string, proxyUrl?: string, options?: LLMOptions): Promise<string> => {
         const match = imageBase64.match(/^data:(.+);base64,(.+)$/);
         if (!match) throw new LLMError("Invalid image format", 'anthropic');
         const mimeType = match[1];
@@ -71,6 +71,7 @@ export const AnthropicProvider: LLMProvider = {
                 body: JSON.stringify({
                     model: modelId,
                     max_tokens: 4096,
+                    temperature: options?.temperature,
                     messages: [
                         {
                             role: "user",
@@ -103,7 +104,7 @@ export const AnthropicProvider: LLMProvider = {
         }
     },
 
-    standardizeText: async (apiKey: string, modelId: string, text: string, prompt: string, proxyUrl?: string): Promise<string> => {
+    standardizeText: async (apiKey: string, modelId: string, text: string, prompt: string, proxyUrl?: string, options?: LLMOptions): Promise<string> => {
         try {
             const baseUrl = 'https://api.anthropic.com/v1/messages';
             const endpoint = proxyUrl ? `${proxyUrl}/${baseUrl}` : baseUrl;
@@ -119,6 +120,7 @@ export const AnthropicProvider: LLMProvider = {
                 body: JSON.stringify({
                     model: modelId,
                     max_tokens: 4096,
+                    temperature: options?.temperature,
                     messages: [
                         { role: "user", content: `${prompt}\n\n${text}` }
                     ]

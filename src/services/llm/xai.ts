@@ -1,4 +1,4 @@
-import { type LLMProvider, type LLMModel, LLMError } from './types';
+import { type LLMProvider, type LLMModel, type LLMOptions, LLMError } from './types';
 
 // xAI uses OpenAI compatible API
 export const XAIProvider: LLMProvider = {
@@ -42,7 +42,7 @@ export const XAIProvider: LLMProvider = {
         }
     },
 
-    generateTranscription: async (apiKey: string, modelId: string, imageBase64: string, prompt: string, proxyUrl?: string): Promise<string> => {
+    generateTranscription: async (apiKey: string, modelId: string, imageBase64: string, prompt: string, proxyUrl?: string, options?: LLMOptions): Promise<string> => {
         try {
             const baseUrl = 'https://api.x.ai/v1/chat/completions';
             const endpoint = proxyUrl ? `${proxyUrl}/${baseUrl}` : baseUrl;
@@ -70,6 +70,7 @@ export const XAIProvider: LLMProvider = {
                             ]
                         }
                     ],
+                    temperature: options?.temperature,
                     stream: false
                 })
             });
@@ -87,7 +88,7 @@ export const XAIProvider: LLMProvider = {
         }
     },
 
-    standardizeText: async (apiKey: string, modelId: string, text: string, prompt: string, proxyUrl?: string): Promise<string> => {
+    standardizeText: async (apiKey: string, modelId: string, text: string, prompt: string, proxyUrl?: string, options?: LLMOptions): Promise<string> => {
         try {
             const baseUrl = 'https://api.x.ai/v1/chat/completions';
             const endpoint = proxyUrl ? `${proxyUrl}/${baseUrl}` : baseUrl;
@@ -103,7 +104,8 @@ export const XAIProvider: LLMProvider = {
                     messages: [
                         { role: "system", content: prompt },
                         { role: "user", content: text }
-                    ]
+                    ],
+                    temperature: options?.temperature
                 })
             });
 
