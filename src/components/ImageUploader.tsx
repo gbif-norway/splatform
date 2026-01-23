@@ -49,7 +49,10 @@ export function ImageUploader({ onImageReady, onGBIFData, className }: ImageUplo
         setIsDragging(false);
         if (e.dataTransfer.files && e.dataTransfer.files[0]) {
             const file = e.dataTransfer.files[0];
-            if (file.type.startsWith('image/')) {
+            const isImage = file.type.startsWith('image/') ||
+                file.name.toLowerCase().endsWith('.tif') ||
+                file.name.toLowerCase().endsWith('.tiff');
+            if (isImage) {
                 setFile(file);
                 setRotation(0);
             }
@@ -204,11 +207,11 @@ export function ImageUploader({ onImageReady, onGBIFData, className }: ImageUplo
                                 <Upload size={32} className="text-primary" />
                             </div>
                             <p className="text-lg font-medium text-foreground">Click or drag image to upload</p>
-                            <p className="text-sm text-foreground-muted mt-2">Supports JPG, PNG, WEBP</p>
+                            <p className="text-sm text-foreground-muted mt-2">Supports JPG, PNG, WEBP, TIFF</p>
                             <input
                                 type="file"
                                 className="hidden"
-                                accept="image/*"
+                                accept="image/*,.tif,.tiff"
                                 onChange={handleFileChange}
                             />
                         </label>
