@@ -1,10 +1,10 @@
-# Splatform (Species Label Automated Transcription) Web Edition
+# SpLATform (Species Label Automated Transcription) Web Edition
 
-**Splatform** is a powerful client-side web application designed to automate the transcription of species specimen labels. It leverages modern Large Language Models (LLMs) to convert images of labels into structured Darwin Core (DWC) JSON data.
+**SpLATform** is a powerful client-side web application designed to automate the transcription of species specimen labels. It leverages modern Large Language Models (LLMs) to convert images of labels into structured Darwin Core (DWC) JSON data.
 
 Check out the live demo: **[https://gbif-norway.github.io/splatform/](https://gbif-norway.github.io/splatform/)**
 
-![Splatform Screenshot](https://via.placeholder.com/800x400?text=Splatform+Interface+Preview)
+![SpLATform Screenshot](https://via.placeholder.com/800x400?text=SpLATform+Interface+Preview)
 
 ## ✨ Features
 
@@ -73,7 +73,7 @@ kubectl apply -f k8s/deployment.yaml
 ```
 
 ### 2. Configure the Web App
-1.  Open **Settings** in the Splatform web app.
+1.  Open **Settings** in the SpLATform web app.
 2.  Enter your **CORS Proxy URL** (e.g., `https://proxy.your-domain.org`).
 3.  The app will transparently route requests effectively.
 

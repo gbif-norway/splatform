@@ -162,7 +162,7 @@ function App() {
               S
             </div>
             <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground-muted">
-              Splatform <span className="text-xs font-normal text-foreground-muted ml-2 tracking-widest uppercase">Web Edition</span>
+              SpLATform <span className="text-xs font-normal text-foreground-muted ml-2 tracking-widest uppercase">Web Edition</span>
             </h1>
           </div>
 
