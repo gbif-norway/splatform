@@ -192,92 +192,113 @@ function App() {
       </header>
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 pt-24 pb-12 flex flex-col gap-8 max-w-[1600px]">
+      <main className="flex flex-col lg:flex-row min-h-[calc(100vh-64px)] pt-16">
 
-        {/* Top Section: Upload & Config (Grid Layout) */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-
-          {/* Left Column: Image (6 cols) */}
-          <div className="lg:col-span-6 space-y-4 h-full flex flex-col">
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-foreground-muted uppercase tracking-wider pl-1 flex items-center gap-2">
-                <span className="w-6 h-6 rounded-full bg-primary/20 text-primary flex items-center justify-center text-xs">1</span>
-                Input Image
-              </h2>
-            </div>
-            <ImageUploader
-              onImageReady={setImage}
-              onGBIFData={setGbifData}
-              className="flex-1"
-            />
+        {/* Left Column: Fixed Specimen Image */}
+        <aside className="lg:w-1/2 lg:sticky lg:top-16 lg:h-[calc(100vh-64px)] p-6 bg-surface/20 border-r border-border overflow-hidden flex flex-col gap-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-foreground-muted uppercase tracking-wider pl-1 flex items-center gap-2">
+              <span className="w-6 h-6 rounded-full bg-primary/20 text-primary flex items-center justify-center text-xs font-bold">1</span>
+              Specimen Image
+            </h2>
           </div>
-
-          {/* Right Column: Config & Action (6 cols) */}
-          <div className="lg:col-span-6 flex flex-col space-y-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-foreground-muted uppercase tracking-wider pl-1 flex items-center gap-2">
-                <span className="w-6 h-6 rounded-full bg-accent/20 text-accent flex items-center justify-center text-xs">2</span>
-                Pipeline Configuration
-              </h2>
-            </div>
-
-            <div className="flex flex-col gap-6">
-              <PromptConfig
-                step={1}
-                prompt={prompt1}
-                setPrompt={setPrompt1}
-                selectedModel={model1}
-                setSelectedModel={setModel1}
-                selectedProvider={provider1}
-                setSelectedProvider={setProvider1}
-                temperature={temp1}
-                setTemperature={setTemp1}
-              />
-              <PromptConfig
-                step={2}
-                prompt={prompt2}
-                setPrompt={setPrompt2}
-                selectedModel={model2}
-                setSelectedModel={setModel2}
-                selectedProvider={provider2}
-                setSelectedProvider={setProvider2}
-                temperature={temp2}
-                setTemperature={setTemp2}
-              />
-            </div>
-
-            <div className="relative group">
-              <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg blur opacity-25 group-hover:opacity-75 transition duration-1000 group-hover:duration-200"></div>
-              <Button
-                className="relative w-full text-lg py-6 bg-surface border border-border hover:bg-surface-hover transition-all font-semibold tracking-wide"
-                onClick={handleRun}
-                disabled={isLoading || !image}
-                isLoading={isLoading}
-              >
-                {!isLoading && <Play size={20} className="mr-3 fill-primary text-primary" />}
-                <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-                  {isLoading ? (step === 1 ? "Transcribing Image..." : "Standardizing Text...") : "Execute Pipeline"}
-                </span>
-              </Button>
-            </div>
-          </div>
-        </div>
-
-        {/* Results Section */}
-        <div className="w-full space-y-4">
-          <h2 className="text-sm font-semibold text-foreground-muted uppercase tracking-wider pl-1 flex items-center gap-2">
-            <span className="w-6 h-6 rounded-full bg-primary/20 text-primary flex items-center justify-center text-xs">3</span>
-            Results
-          </h2>
-          <ResultTable
-            step1Result={result1}
-            step2Result={result2}
-            isLoading={isLoading}
-            currentStep={step}
-            gbifData={gbifData || undefined}
+          <ImageUploader
+            onImageReady={setImage}
+            onGBIFData={setGbifData}
+            className="flex-1 shadow-inner"
           />
-        </div>
+        </aside>
 
+        {/* Right Column: Scrollable Config & Results */}
+        <section className="lg:w-1/2 flex flex-col">
+
+          {/* Sub Navigation Bar */}
+          <nav className="sticky top-16 z-40 bg-background/95 backdrop-blur-md border-b border-border px-6 py-2 flex items-center gap-4 justify-center sm:justify-start">
+            <a href="#config" className="text-xs font-bold uppercase tracking-widest text-foreground-muted hover:text-primary transition-colors px-2 py-1 rounded">Pipeline</a>
+            <div className="w-px h-3 bg-border"></div>
+            <a href="#results" className="text-xs font-bold uppercase tracking-widest text-foreground-muted hover:text-primary transition-colors px-2 py-1 rounded">Results</a>
+            <div className="flex-1"></div>
+            <div className="hidden sm:flex items-center gap-2">
+              {isLoading && (
+                <div className="flex items-center gap-2 animate-pulse text-[10px] font-bold uppercase tracking-tighter text-info">
+                  <div className="w-1.5 h-1.5 rounded-full bg-info"></div>
+                  {step === 1 ? 'Transcribing...' : 'Standardizing...'}
+                </div>
+              )}
+            </div>
+          </nav>
+
+          {/* Scrollable Content Container */}
+          <div className="p-6 space-y-12">
+
+            {/* Step 2: Pipeline Configuration */}
+            <div id="config" className="scroll-mt-32 space-y-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-sm font-semibold text-foreground-muted uppercase tracking-wider pl-1 flex items-center gap-2">
+                  <span className="w-6 h-6 rounded-full bg-accent/20 text-accent flex items-center justify-center text-xs font-bold">2</span>
+                  Pipeline Configuration
+                </h2>
+              </div>
+
+              <div className="flex flex-col gap-6">
+                <PromptConfig
+                  step={1}
+                  prompt={prompt1}
+                  setPrompt={setPrompt1}
+                  selectedModel={model1}
+                  setSelectedModel={setModel1}
+                  selectedProvider={provider1}
+                  setSelectedProvider={setProvider1}
+                  temperature={temp1}
+                  setTemperature={setTemp1}
+                />
+                <PromptConfig
+                  step={2}
+                  prompt={prompt2}
+                  setPrompt={setPrompt2}
+                  selectedModel={model2}
+                  setSelectedModel={setModel2}
+                  selectedProvider={provider2}
+                  setSelectedProvider={setProvider2}
+                  temperature={temp2}
+                  setTemperature={setTemp2}
+                />
+              </div>
+
+              <div className="relative group">
+                <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg blur opacity-25 group-hover:opacity-75 transition duration-1000 group-hover:duration-200"></div>
+                <Button
+                  className="relative w-full text-lg py-6 bg-surface border border-border hover:bg-surface-hover transition-all font-semibold tracking-wide"
+                  onClick={handleRun}
+                  disabled={isLoading || !image}
+                  isLoading={isLoading}
+                >
+                  {!isLoading && <Play size={20} className="mr-3 fill-primary text-primary" />}
+                  <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                    {isLoading ? (step === 1 ? "Transcribing Image..." : "Standardizing Text...") : "Execute Pipeline"}
+                  </span>
+                </Button>
+              </div>
+            </div>
+
+            {/* Step 3: Results */}
+            <div id="results" className="scroll-mt-32 space-y-6">
+              <div className="flex justify-between items-center">
+                <h2 className="text-sm font-semibold text-foreground-muted uppercase tracking-wider pl-1 flex items-center gap-2">
+                  <span className="w-6 h-6 rounded-full bg-primary/20 text-primary flex items-center justify-center text-xs font-bold">3</span>
+                  Extraction Results
+                </h2>
+              </div>
+              <ResultTable
+                step1Result={result1}
+                step2Result={result2}
+                isLoading={isLoading}
+                currentStep={step}
+                gbifData={gbifData || undefined}
+              />
+            </div>
+          </div>
+        </section>
       </main>
 
       {/* Modals/Sidebars */}

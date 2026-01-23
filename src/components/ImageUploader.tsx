@@ -174,7 +174,7 @@ export function ImageUploader({ onImageReady, onGBIFData, className }: ImageUplo
     return (
         <Card
             className={cn(
-                "p-6 flex flex-col items-center justify-center border-dashed border-2 min-h-[500px] transition-colors",
+                "p-6 flex flex-col items-center justify-center border-dashed border-2 h-full transition-colors",
                 isDragging ? "border-primary bg-primary/10" : "border-border bg-surface/40",
                 className
             )}

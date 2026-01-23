@@ -33,6 +33,10 @@
   --card-bg: rgba(248, 250, 252, 0.8);
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 html,
 body {
   background-color: rgb(var(--background));
