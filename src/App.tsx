@@ -208,8 +208,8 @@ function App() {
           {/* Right Column: Config & Action (6 cols) */}
           <div className="lg:col-span-6 flex flex-col space-y-6">
             <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider pl-1 flex items-center gap-2">
-                <span className="w-6 h-6 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-xs">2</span>
+              <h2 className="text-sm font-semibold text-foreground-muted uppercase tracking-wider pl-1 flex items-center gap-2">
+                <span className="w-6 h-6 rounded-full bg-accent/20 text-accent flex items-center justify-center text-xs">2</span>
                 Pipeline Configuration
               </h2>
             </div>
@@ -238,13 +238,13 @@ function App() {
             <div className="relative group">
               <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg blur opacity-25 group-hover:opacity-75 transition duration-1000 group-hover:duration-200"></div>
               <Button
-                className="relative w-full text-lg py-6 bg-slate-900 border border-slate-700 hover:bg-slate-800 transition-all font-semibold tracking-wide"
+                className="relative w-full text-lg py-6 bg-surface border border-border hover:bg-surface-hover transition-all font-semibold tracking-wide"
                 onClick={handleRun}
                 disabled={isLoading || !image}
                 isLoading={isLoading}
               >
-                {!isLoading && <Play size={20} className="mr-3 fill-blue-500 text-blue-500" />}
-                <span className="bg-gradient-to-r from-blue-200 to-indigo-200 bg-clip-text text-transparent">
+                {!isLoading && <Play size={20} className="mr-3 fill-primary text-primary" />}
+                <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
                   {isLoading ? (step === 1 ? "Transcribing Image..." : "Standardizing Text...") : "Execute Pipeline"}
                 </span>
               </Button>
@@ -254,8 +254,8 @@ function App() {
 
         {/* Results Section */}
         <div className="w-full space-y-4">
-          <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider pl-1 flex items-center gap-2">
-            <span className="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs">3</span>
+          <h2 className="text-sm font-semibold text-foreground-muted uppercase tracking-wider pl-1 flex items-center gap-2">
+            <span className="w-6 h-6 rounded-full bg-primary/20 text-primary flex items-center justify-center text-xs">3</span>
             Results
           </h2>
           <ResultTable
@@ -277,7 +277,7 @@ function App() {
       />
 
       {showSettings && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowSettings(false)}>
+        <div className="fixed inset-0 bg-black/40 dark:bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowSettings(false)}>
           <div onClick={e => e.stopPropagation()} className="w-full max-w-2xl">
             <Settings onClose={() => setShowSettings(false)} />
           </div>
@@ -285,11 +285,11 @@ function App() {
       )}
 
       {showHistory && (
-        <div className="fixed inset-y-0 right-0 w-80 bg-slate-950 border-l border-white/10 z-50 shadow-2xl transform transition-transform duration-300">
+        <div className="fixed inset-y-0 right-0 w-80 bg-background border-l border-border z-50 shadow-2xl transform transition-transform duration-300">
           <div className="h-full overflow-y-auto">
-            <div className="p-4 flex justify-between items-center border-b border-white/5">
+            <div className="p-4 flex justify-between items-center border-b border-border">
               <h2 className="font-bold">Run History</h2>
-              <button onClick={() => setShowHistory(false)} className="text-slate-500"><SettingsIcon className="rotate-45" size={20} /></button>
+              <button onClick={() => setShowHistory(false)} className="text-foreground-muted hover:text-foreground"><SettingsIcon className="rotate-45" size={20} /></button>
             </div>
             <History onLoadItem={(item) => { loadHistoryItem(item); setShowHistory(false); }} refreshTrigger={historyTrigger} />
           </div>

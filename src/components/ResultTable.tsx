@@ -2,6 +2,7 @@ import { Card } from './ui-misc';
 import { Button } from './ui-elements';
 import { Copy, Check, AlertTriangle, FileJson, FileText, ArrowRight } from 'lucide-react';
 import { useState, useMemo } from 'react';
+import { cn } from '../utils/cn';
 import type { GBIFOccurrence } from '../services/gbif';
 
 interface ResultTableProps {
@@ -50,7 +51,7 @@ export function ResultTable({ step1Result, step2Result, isLoading, currentStep, 
                     <h3 className="font-semibold text-primary">Step 1: Transcription</h3>
                     {step1Result && (
                         <Button variant="ghost" size="sm" onClick={() => copyToClipboard(step1Result, 'step1')} className="h-8 w-8 p-0">
-                            {copied === 'step1' ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />}
+                            {copied === 'step1' ? <Check size={14} className="text-success" /> : <Copy size={14} />}
                         </Button>
                     )}
                 </div>
@@ -75,10 +76,10 @@ export function ResultTable({ step1Result, step2Result, isLoading, currentStep, 
                         Step 2: Standardization
                         {step2Result && (
                             isValidJson ?
-                                <span className="text-[10px] bg-emerald-500/10 text-emerald-500 px-2 py-0.5 rounded-full border border-emerald-500/20 flex items-center gap-1">
+                                <span className="text-[10px] bg-success/10 text-success px-2 py-0.5 rounded-full border border-success/20 flex items-center gap-1">
                                     <Check size={10} /> Valid JSON
                                 </span> :
-                                <span className="text-[10px] bg-red-500/10 text-red-500 px-2 py-0.5 rounded-full border border-red-500/20 flex items-center gap-1">
+                                <span className="text-[10px] bg-error/10 text-error px-2 py-0.5 rounded-full border border-error/20 flex items-center gap-1">
                                     <AlertTriangle size={10} /> Invalid JSON
                                 </span>
                         )}
@@ -89,13 +90,13 @@ export function ResultTable({ step1Result, step2Result, isLoading, currentStep, 
                                 {showRaw ? <FileJson size={14} /> : <FileText size={14} />}
                             </Button>
                             <Button variant="ghost" size="sm" onClick={() => copyToClipboard(step2Result, 'step2')} className="h-8 w-8 p-0">
-                                {copied === 'step2' ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />}
+                                {copied === 'step2' ? <Check size={14} className="text-success" /> : <Copy size={14} />}
                             </Button>
                         </div>
                     )}
                 </div>
 
-                <div className={`flex-1 min-h-[200px] overflow-auto rounded bg-surface p-4 border border-border font-mono text-sm whitespace-pre-wrap ${isValidJson && !showRaw ? 'text-emerald-500' : 'text-foreground'}`}>
+                <div className={`flex-1 min-h-[200px] overflow-auto rounded bg-surface p-4 border border-border font-mono text-sm whitespace-pre-wrap ${isValidJson && !showRaw ? 'text-success' : 'text-foreground'}`}>
                     {isLoading && currentStep === 2 ? (
                         <div className="animate-pulse flex space-x-4">
                             <div className="flex-1 space-y-4 py-1">
@@ -111,7 +112,7 @@ export function ResultTable({ step1Result, step2Result, isLoading, currentStep, 
                             ) : (
                                 <>
                                     {!isValidJson && step2Result && (
-                                        <div className="mb-4 bg-red-500/10 border border-red-500/20 p-3 rounded text-red-600 dark:text-red-400 text-xs flex items-start gap-2">
+                                        <div className="mb-4 bg-error/10 border border-error/20 p-3 rounded text-error text-xs flex items-start gap-2">
                                             <AlertTriangle size={14} className="mt-0.5 shrink-0" />
                                             <div>
                                                 <p className="font-bold">Parsing Error</p>
@@ -129,53 +130,99 @@ export function ResultTable({ step1Result, step2Result, isLoading, currentStep, 
 
             {/* Comparison Section (Full Width) */}
             {gbifData && step2Result && isValidJson && (
-                <Card className="md:col-span-2 p-6 bg-surface shadow-lg overflow-hidden">
+                <Card className="md:col-span-2 p-6 bg-surface shadow-lg">
                     <div className="flex items-center gap-2 mb-6 pb-2 border-b border-border">
                         <ArrowRight className="text-primary" size={20} />
-                        <h3 className="text-lg font-bold text-foreground">Comparison: AI Result vs. Official GBIF Data</h3>
+                        <h3 className="text-lg font-bold text-foreground">Detailed Comparison: AI vs. GBIF</h3>
                     </div>
 
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm">
                             <thead>
                                 <tr className="text-left border-b border-border">
-                                    <th className="pb-3 font-semibold text-foreground-muted w-1/4">Term</th>
-                                    <th className="pb-3 font-semibold text-primary w-3/8">AI Extracted</th>
-                                    <th className="pb-3 font-semibold text-emerald-500 w-3/8">GBIF Official</th>
+                                    <th className="pb-3 font-semibold text-foreground-muted w-1/4">Darwin Core Term</th>
+                                    <th className="pb-3 font-semibold text-primary w-3/8 text-center bg-primary/5 rounded-t-lg">AI Extracted</th>
+                                    <th className="pb-3 font-semibold text-success w-3/8 text-center bg-success/5 rounded-t-lg">GBIF Official</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-border">
-                                {[
-                                    { term: 'Scientific Name', key: 'dwc:scientificName', gbif: gbifData.scientificName },
-                                    { term: 'Event Date', key: 'dwc:eventDate', gbif: gbifData.eventDate },
-                                    { term: 'Country', key: 'dwc:country', gbif: gbifData.country },
-                                    { term: 'Locality', key: 'dwc:locality', gbif: gbifData.locality },
-                                    { term: 'Recorded By', key: 'dwc:recordedBy', gbif: gbifData.recordedBy },
-                                    { term: 'Catalog Number', key: 'dwc:catalogNumber', gbif: gbifData.catalogNumber },
-                                    { term: 'Institution Code', key: 'dwc:institutionCode', gbif: gbifData.institutionCode },
-                                    { term: 'Collection Code', key: 'dwc:collectionCode', gbif: gbifData.collectionCode },
-                                ].map((row) => {
-                                    const aiVal = parsedJson[row.key] || parsedJson[row.key.replace('dwc:', '')] || '-';
-                                    const gbifVal = row.gbif || '-';
-                                    const isMatch = aiVal.toString().toLowerCase() === gbifVal.toString().toLowerCase();
+                                {(() => {
+                                    // 1. Define Core DWC Terms we always want to see first if they exist
+                                    const CORE_TERMS = [
+                                        'dwc:scientificName', 'dwc:eventDate', 'dwc:recordedBy',
+                                        'dwc:locality', 'dwc:country', 'dwc:catalogNumber',
+                                        'dwc:institutionCode', 'dwc:collectionCode'
+                                    ];
 
-                                    return (
-                                        <tr key={row.key} className="group hover:bg-surface-hover transition-colors">
-                                            <td className="py-3 font-mono text-xs text-foreground-muted group-hover:text-foreground">
-                                                {row.key}
-                                                <div className="text-[10px] text-foreground-muted/60 mt-0.5">{row.term}</div>
-                                            </td>
-                                            <td className={`py-3 pr-4 align-top ${!isMatch && aiVal !== '-' ? 'text-primary font-medium' : 'text-foreground'}`}>
-                                                {aiVal}
-                                            </td>
-                                            <td className={`py-3 align-top ${!isMatch && gbifVal !== '-' ? 'text-emerald-500 font-medium' : 'text-foreground'}`}>
-                                                {gbifVal}
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
+                                    // 2. Identify all keys from AI
+                                    const aiKeys = Object.keys(parsedJson).map(k => k.startsWith('dwc:') ? k : `dwc:${k}`);
+
+                                    // 3. Identify relevant keys from GBIF (exclude internal stuff)
+                                    const IGNORE_GBIF = [
+                                        'key', 'media', 'extensions', 'identifiers', 'allLines', 'verbatim',
+                                        'networkKeys', 'datasetKey', 'publishingOrgKey', 'installationKey',
+                                        'protocol', 'lastCrawled', 'lastParsed', 'crawlId', 'issues',
+                                        'modified', 'lastInterpreted', 'references', 'license', 'facts', 'relations'
+                                    ];
+                                    const gbifKeys = Object.keys(gbifData)
+                                        .filter(k => !IGNORE_GBIF.includes(k) && typeof gbifData[k] !== 'object')
+                                        .map(k => k.startsWith('dwc:') ? k : `dwc:${k}`);
+
+                                    // 4. Create unique set of all keys
+                                    const allKeys = Array.from(new Set([...CORE_TERMS, ...aiKeys, ...gbifKeys]));
+
+                                    // 5. Divide into Match, Mismatch, and Unique
+                                    return allKeys.map(fullKey => {
+                                        const shortKey = fullKey.replace('dwc:', '');
+
+                                        // Try to find value in AI (check both prefixed and non-prefixed)
+                                        const aiVal = parsedJson[fullKey] !== undefined ? parsedJson[fullKey] : (parsedJson[shortKey] !== undefined ? parsedJson[shortKey] : undefined);
+
+                                        // Try to find value in GBIF
+                                        const gbifVal = gbifData[fullKey] !== undefined ? gbifData[fullKey] : (gbifData[shortKey] !== undefined ? gbifData[shortKey] : undefined);
+
+                                        if (aiVal === undefined && gbifVal === undefined) return null;
+
+                                        const isMatch = aiVal?.toString().toLowerCase() === gbifVal?.toString().toLowerCase();
+                                        const isCore = CORE_TERMS.includes(fullKey);
+
+                                        return (
+                                            <tr key={fullKey} className={cn(
+                                                "group transition-colors",
+                                                isCore ? "bg-primary/5 hover:bg-primary/10" : "hover:bg-surface-hover"
+                                            )}>
+                                                <td className="py-3 px-2 font-mono text-xs text-foreground-muted group-hover:text-foreground">
+                                                    <div className="flex items-center gap-1.5">
+                                                        {isCore && <div className="w-1.5 h-1.5 rounded-full bg-primary" />}
+                                                        {fullKey}
+                                                    </div>
+                                                </td>
+                                                <td className={cn(
+                                                    "py-3 px-4 align-top text-center border-x border-border/50",
+                                                    aiVal === undefined ? "text-foreground-muted/30 italic" :
+                                                        (!isMatch && gbifVal !== undefined ? "text-primary font-bold bg-primary/10" : "text-foreground")
+                                                )}>
+                                                    {aiVal !== undefined ? String(aiVal) : 'not found'}
+                                                </td>
+                                                <td className={cn(
+                                                    "py-3 px-4 align-top text-center",
+                                                    gbifVal === undefined ? "text-foreground-muted/30 italic" :
+                                                        (!isMatch && aiVal !== undefined ? "text-success font-bold bg-success/10" : "text-foreground")
+                                                )}>
+                                                    {gbifVal !== undefined ? String(gbifVal) : 'not recorded'}
+                                                </td>
+                                            </tr>
+                                        );
+                                    }).filter(Boolean);
+                                })()}
                             </tbody>
                         </table>
+                    </div>
+
+                    <div className="mt-4 p-3 bg-surface-hover rounded-lg border border-border text-[11px] text-foreground-muted flex gap-4">
+                        <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-primary" /> Core Term</div>
+                        <div className="flex items-center gap-1"><span className="p-0.5 bg-primary/10 text-primary font-bold rounded">Bold</span> Mismatch</div>
+                        <div className="flex items-center gap-1"><span className="italic opacity-30">Italic</span> Missing in Source</div>
                     </div>
                 </Card>
             )}
