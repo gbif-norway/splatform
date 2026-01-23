@@ -98,14 +98,14 @@ export function Settings({ onClose }: { onClose?: () => void }) {
                                 {validating[field.id] ? (
                                     <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
                                 ) : (
-                                    <span className={validationStatus[field.id] === 'success' ? 'text-emerald-500' : validationStatus[field.id] === 'error' ? 'text-red-500' : 'text-foreground-muted'}>
+                                    <span className={validationStatus[field.id] === 'success' ? 'text-success' : validationStatus[field.id] === 'error' ? 'text-error' : 'text-foreground-muted'}>
                                         Test
                                     </span>
                                 )}
                             </Button>
                         </div>
-                        {validationStatus[field.id] === 'success' && <p className="text-xs text-emerald-500">Connection successful!</p>}
-                        {validationStatus[field.id] === 'error' && <p className="text-xs text-red-500">Connection failed. Check key or proxy settings.</p>}
+                        {validationStatus[field.id] === 'success' && <p className="text-xs text-success">Connection successful!</p>}
+                        {validationStatus[field.id] === 'error' && <p className="text-xs text-error">Connection failed. Check key or proxy settings.</p>}
                     </div>
                 ))}
             </div>

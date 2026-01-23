@@ -16,6 +16,8 @@ export default {
         "border-muted": "rgb(var(--border-muted) / <alpha-value>)",
         primary: "rgb(var(--primary) / <alpha-value>)",
         accent: "rgb(var(--accent) / <alpha-value>)",
+        success: "rgb(var(--success) / <alpha-value>)",
+        error: "rgb(var(--error) / <alpha-value>)",
       },
     },
   },

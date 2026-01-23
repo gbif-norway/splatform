@@ -214,8 +214,8 @@ export function ImageUploader({ onImageReady, onGBIFData, className }: ImageUplo
                         </label>
                     ) : (
                         <div className="flex-1 flex flex-col items-center justify-center w-full p-10 space-y-4">
-                            <div className="bg-emerald-500/10 p-4 rounded-full">
-                                <Link size={32} className="text-emerald-500" />
+                            <div className="bg-success/10 p-4 rounded-full">
+                                <Link size={32} className="text-success" />
                             </div>
                             <div className="w-full max-w-md space-y-2">
                                 <p className="text-lg font-medium text-foreground text-center">Load Specimen from GBIF</p>
@@ -223,7 +223,7 @@ export function ImageUploader({ onImageReady, onGBIFData, className }: ImageUplo
                                     <input
                                         type="text"
                                         placeholder="Paste GBIF occurrence URL or ID..."
-                                        className="flex-1 bg-surface border border-border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                                        className="flex-1 bg-surface border border-border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-success/40"
                                         value={gbifUrl}
                                         onChange={(e) => setGbifUrl(e.target.value)}
                                         onKeyDown={(e) => e.key === 'Enter' && handleLoadGbif()}
@@ -236,7 +236,7 @@ export function ImageUploader({ onImageReady, onGBIFData, className }: ImageUplo
                                         {fetchingGbif ? 'Loading...' : 'Load'}
                                     </Button>
                                 </div>
-                                {gbifError && <p className="text-xs text-red-500 mt-2">{gbifError}</p>}
+                                {gbifError && <p className="text-xs text-error mt-2">{gbifError}</p>}
                                 <p className="text-[10px] text-foreground-muted text-center uppercase tracking-widest mt-4">Example: https://www.gbif.org/occurrence/4052452374</p>
                             </div>
                         </div>
@@ -246,7 +246,7 @@ export function ImageUploader({ onImageReady, onGBIFData, className }: ImageUplo
                 <div className="relative w-full h-full flex flex-col">
                     {/* Image Viewport */}
                     <div
-                        className="relative w-full flex-1 overflow-hidden rounded-lg shadow-2xl border border-border bg-black/50 cursor-grab active:cursor-grabbing min-h-[400px]"
+                        className="relative w-full flex-1 overflow-hidden rounded-lg shadow-2xl border border-border bg-surface/50 cursor-grab active:cursor-grabbing min-h-[400px]"
                         onWheel={handleWheel}
                         onMouseDown={handleMouseDown}
                         onMouseMove={handleMouseMove}

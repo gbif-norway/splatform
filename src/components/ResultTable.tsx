@@ -50,7 +50,7 @@ export function ResultTable({ step1Result, step2Result, isLoading, currentStep, 
                     <h3 className="font-semibold text-primary">Step 1: Transcription</h3>
                     {step1Result && (
                         <Button variant="ghost" size="sm" onClick={() => copyToClipboard(step1Result, 'step1')} className="h-8 w-8 p-0">
-                            {copied === 'step1' ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />}
+                            {copied === 'step1' ? <Check size={14} className="text-success" /> : <Copy size={14} />}
                         </Button>
                     )}
                 </div>
@@ -75,10 +75,10 @@ export function ResultTable({ step1Result, step2Result, isLoading, currentStep, 
                         Step 2: Standardization
                         {step2Result && (
                             isValidJson ?
-                                <span className="text-[10px] bg-emerald-500/10 text-emerald-500 px-2 py-0.5 rounded-full border border-emerald-500/20 flex items-center gap-1">
+                                <span className="text-[10px] bg-success/10 text-success px-2 py-0.5 rounded-full border border-success/20 flex items-center gap-1">
                                     <Check size={10} /> Valid JSON
                                 </span> :
-                                <span className="text-[10px] bg-red-500/10 text-red-500 px-2 py-0.5 rounded-full border border-red-500/20 flex items-center gap-1">
+                                <span className="text-[10px] bg-error/10 text-error px-2 py-0.5 rounded-full border border-error/20 flex items-center gap-1">
                                     <AlertTriangle size={10} /> Invalid JSON
                                 </span>
                         )}
@@ -89,13 +89,13 @@ export function ResultTable({ step1Result, step2Result, isLoading, currentStep, 
                                 {showRaw ? <FileJson size={14} /> : <FileText size={14} />}
                             </Button>
                             <Button variant="ghost" size="sm" onClick={() => copyToClipboard(step2Result, 'step2')} className="h-8 w-8 p-0">
-                                {copied === 'step2' ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />}
+                                {copied === 'step2' ? <Check size={14} className="text-success" /> : <Copy size={14} />}
                             </Button>
                         </div>
                     )}
                 </div>
 
-                <div className={`flex-1 min-h-[200px] overflow-auto rounded bg-surface p-4 border border-border font-mono text-sm whitespace-pre-wrap ${isValidJson && !showRaw ? 'text-emerald-500' : 'text-foreground'}`}>
+                <div className={`flex-1 min-h-[200px] overflow-auto rounded bg-surface p-4 border border-border font-mono text-sm whitespace-pre-wrap ${isValidJson && !showRaw ? 'text-success' : 'text-foreground'}`}>
                     {isLoading && currentStep === 2 ? (
                         <div className="animate-pulse flex space-x-4">
                             <div className="flex-1 space-y-4 py-1">
@@ -111,7 +111,7 @@ export function ResultTable({ step1Result, step2Result, isLoading, currentStep, 
                             ) : (
                                 <>
                                     {!isValidJson && step2Result && (
-                                        <div className="mb-4 bg-red-500/10 border border-red-500/20 p-3 rounded text-red-600 dark:text-red-400 text-xs flex items-start gap-2">
+                                        <div className="mb-4 bg-error/10 border border-error/20 p-3 rounded text-error text-xs flex items-start gap-2">
                                             <AlertTriangle size={14} className="mt-0.5 shrink-0" />
                                             <div>
                                                 <p className="font-bold">Parsing Error</p>
@@ -141,7 +141,7 @@ export function ResultTable({ step1Result, step2Result, isLoading, currentStep, 
                                 <tr className="text-left border-b border-border">
                                     <th className="pb-3 font-semibold text-foreground-muted w-1/4">Term</th>
                                     <th className="pb-3 font-semibold text-primary w-3/8">AI Extracted</th>
-                                    <th className="pb-3 font-semibold text-emerald-500 w-3/8">GBIF Official</th>
+                                    <th className="pb-3 font-semibold text-success w-3/8">GBIF Official</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-border">
@@ -168,7 +168,7 @@ export function ResultTable({ step1Result, step2Result, isLoading, currentStep, 
                                             <td className={`py-3 pr-4 align-top ${!isMatch && aiVal !== '-' ? 'text-primary font-medium' : 'text-foreground'}`}>
                                                 {aiVal}
                                             </td>
-                                            <td className={`py-3 align-top ${!isMatch && gbifVal !== '-' ? 'text-emerald-500 font-medium' : 'text-foreground'}`}>
+                                            <td className={`py-3 align-top ${!isMatch && gbifVal !== '-' ? 'text-success font-medium' : 'text-foreground'}`}>
                                                 {gbifVal}
                                             </td>
                                         </tr>
