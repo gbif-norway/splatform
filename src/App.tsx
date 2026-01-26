@@ -7,7 +7,7 @@ import { ResultTable } from './components/ResultTable';
 import { History } from './components/History';
 import { ErrorDisplay } from './components/ErrorDisplay';
 import { Button } from './components/ui-elements';
-import { Settings as SettingsIcon, History as HistoryIcon, Play, Github, Sun, Moon } from 'lucide-react';
+import { Settings as SettingsIcon, History as HistoryIcon, Play, Github, Sun, Moon, X } from 'lucide-react';
 import { useSettings } from './hooks/useSettings';
 import { useTheme } from './hooks/useTheme';
 import { LLMService } from './services/llm';
@@ -333,7 +333,7 @@ function App() {
           <div className="h-full overflow-y-auto">
             <div className="p-4 flex justify-between items-center border-b border-border">
               <h2 className="font-bold">Run History</h2>
-              <button onClick={() => setShowHistory(false)} className="text-foreground-muted hover:text-foreground"><SettingsIcon className="rotate-45" size={20} /></button>
+              <button onClick={() => setShowHistory(false)} className="text-foreground-muted hover:text-foreground"><X size={20} /></button>
             </div>
             <History onLoadItem={(item) => { loadHistoryItem(item); setShowHistory(false); }} refreshTrigger={historyTrigger} />
           </div>

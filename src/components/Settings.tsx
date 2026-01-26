@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { useSettings } from '../hooks/useSettings';
 import { Input, Label, Button } from './ui-elements';
 import { Card } from './ui-misc';
-import { Eye, EyeOff, Save } from 'lucide-react';
+import { Eye, EyeOff, Save, X } from 'lucide-react';
 
 export function Settings({ onClose }: { onClose?: () => void }) {
     const { settings, saveSettings } = useSettings();
@@ -59,6 +59,11 @@ export function Settings({ onClose }: { onClose?: () => void }) {
                 <h2 className="text-xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
                     LLM Settings
                 </h2>
+                {onClose && (
+                    <button onClick={onClose} className="text-foreground-muted hover:text-foreground transition-colors">
+                        <X size={20} />
+                    </button>
+                )}
             </div>
 
             <div className="grid gap-4">
