@@ -156,6 +156,18 @@ function App() {
     setResult2(item.result2);
     if (item.temp1 !== undefined) setTemp1(item.temp1);
     if (item.temp2 !== undefined) setTemp2(item.temp2);
+
+    // Restore Model Selection
+    if (item.provider1) {
+      const [p, m] = item.provider1.split('/');
+      setProvider1(p);
+      setModel1(m);
+    }
+    if (item.provider2) {
+      const [p, m] = item.provider2.split('/');
+      setProvider2(p);
+      setModel2(m);
+    }
   };
 
   return (
