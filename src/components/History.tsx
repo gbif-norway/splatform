@@ -1,6 +1,7 @@
 import { StorageService, type TranscribedItem } from '../services/storage';
-import { Clock, Trash2, ArrowRight } from 'lucide-react';
+import { Clock, Trash2, ArrowRight, Download } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { exportToTxt } from '../utils/export';
 
 interface HistoryProps {
     onLoadItem: (item: TranscribedItem) => void;
@@ -47,7 +48,19 @@ export function History({ onLoadItem, refreshTrigger }: HistoryProps) {
                             second: '2-digit',
                             hour12: false
                         })}</span>
-                        <span className="text-xs bg-surface-hover px-1.5 py-0.5 rounded text-primary">{item.provider1}</span>
+                        <div className="flex gap-2">
+                            <span className="text-xs bg-surface-hover px-1.5 py-0.5 rounded text-primary">{item.provider1}</span>
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    exportToTxt(item);
+                                }}
+                                className="text-foreground-muted hover:text-primary transition-colors"
+                                title="Download as TXT"
+                            >
+                                <Download size={14} />
+                            </button>
+                        </div>
                     </div>
                     <div className="flex items-center gap-2 text-sm text-foreground">
                         <Clock size={12} className="text-foreground-muted" />
