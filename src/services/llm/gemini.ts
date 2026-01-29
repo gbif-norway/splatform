@@ -4,7 +4,7 @@ export const GeminiProvider: LLMProvider = {
     id: 'gemini',
     name: 'Google Gemini',
 
-    listModels: async (apiKey: string, proxyUrl?: string): Promise<LLMModel[]> => {
+    listModels: async (apiKey: string, proxyUrl?: string, _strict?: boolean): Promise<LLMModel[]> => {
         const defaultModels: LLMModel[] = [
             { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash', provider: 'gemini' },
             { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro', provider: 'gemini' },

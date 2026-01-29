@@ -4,7 +4,7 @@ export const AnthropicProvider: LLMProvider = {
     id: 'anthropic',
     name: 'Anthropic',
 
-    listModels: async (apiKey: string, proxyUrl?: string): Promise<LLMModel[]> => {
+    listModels: async (apiKey: string, proxyUrl?: string, strict?: boolean): Promise<LLMModel[]> => {
         const defaultModels: LLMModel[] = [
             { id: 'claude-3-5-sonnet-20240620', name: 'Claude 3.5 Sonnet', provider: 'anthropic' },
             { id: 'claude-3-opus-20240229', name: 'Claude 3 Opus', provider: 'anthropic' },
@@ -29,14 +29,17 @@ export const AnthropicProvider: LLMProvider = {
                 }
             });
 
-            if (!response.ok) return defaultModels;
+            if (!response.ok) {
+                if (strict) throw new Error(response.statusText);
+                return defaultModels;
+            }
 
             const data = await response.json();
             // shape: { data: [ { id: "...", type: "model", created_at: ... } ] }
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const models = data.data
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                .filter((m: any) => m.id.includes('claude-3')) // Basic filtering for relevant models
+                .filter((m: any) => m.id.includes('claude')) // Basic filtering for relevant models
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 .map((m: any): LLMModel => ({
                     id: m.id,
@@ -45,7 +48,8 @@ export const AnthropicProvider: LLMProvider = {
                 }));
 
             return models.length > 0 ? models : defaultModels;
-        } catch {
+        } catch (e) {
+            if (strict) throw e;
             return defaultModels;
         }
     },

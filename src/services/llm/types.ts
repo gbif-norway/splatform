@@ -13,7 +13,7 @@ export interface LLMProvider {
     name: string;
 
     // List available models (dynamic or static fallback)
-    listModels(apiKey: string, proxyUrl?: string): Promise<LLMModel[]>;
+    listModels(apiKey: string, proxyUrl?: string, strict?: boolean): Promise<LLMModel[]>;
 
     // Step 1: Transcription
     // Image is passed as a base64 string (including data URI prefix)
