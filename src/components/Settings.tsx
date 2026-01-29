@@ -33,7 +33,7 @@ export function Settings({ onClose }: { onClose?: () => void }) {
         try {
             const provider = LLMService.getProvider(providerId);
             // Try to list models as a lightweight test
-            const models = await provider.listModels(apiKey as string, keys.proxyUrl);
+            const models = await provider.listModels(apiKey as string, keys.proxyUrl, true);
             if (models.length > 0) {
                 setValidationStatus(prev => ({ ...prev, [fieldId]: 'success' }));
             } else {

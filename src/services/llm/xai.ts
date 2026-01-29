@@ -5,7 +5,7 @@ export const XAIProvider: LLMProvider = {
     id: 'xai',
     name: 'xAI',
 
-    listModels: async (apiKey: string, proxyUrl?: string): Promise<LLMModel[]> => {
+    listModels: async (apiKey: string, proxyUrl?: string, _strict?: boolean): Promise<LLMModel[]> => {
         const defaultModels: LLMModel[] = [
             { id: 'grok-vision-beta', name: 'Grok Vision Beta', provider: 'xai' },
             { id: 'grok-2-vision-1212', name: 'Grok 2 Vision', provider: 'xai' },

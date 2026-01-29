@@ -4,7 +4,7 @@ export const OpenAIProvider: LLMProvider = {
     id: 'openai',
     name: 'OpenAI',
 
-    listModels: async (apiKey: string, proxyUrl?: string): Promise<LLMModel[]> => {
+    listModels: async (apiKey: string, proxyUrl?: string, _strict?: boolean): Promise<LLMModel[]> => {
         // Default fallback models if fetch fails
         const defaultModels: LLMModel[] = [
             { id: 'gpt-4o', name: 'GPT-4o', provider: 'openai' },
