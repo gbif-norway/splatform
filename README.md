@@ -4,7 +4,6 @@
 
 Check out the live demo: **[https://gbif-norway.github.io/splatform/](https://gbif-norway.github.io/splatform/)**
 
-![SpLATform Screenshot](https://via.placeholder.com/800x400?text=SpLATform+Interface+Preview)
 
 ## ✨ Features
 
