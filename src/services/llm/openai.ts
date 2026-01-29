@@ -143,8 +143,9 @@ export const OpenAIProvider: LLMProvider = {
                 // OpenAI Responses API structure can vary.
                 // It might be output[0].content or output[0].message.content or output[0].text depending on configuration.
                 // We'll try to find the content in a few likely places.
+                // Filter out reasoning chunks which might come first in gpt-5/reasoning models
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                const output = data.output?.[0] as any;
+                const output = (data.output as any[])?.find((o: any) => o.type !== 'reasoning') || data.output?.[0];
                 if (!output) return "";
 
                 // Case 1: output itself has content array (User's case)
@@ -171,6 +172,7 @@ export const OpenAIProvider: LLMProvider = {
             }
             return data.choices[0]?.message?.content || "";
         } catch (e: unknown) {
+            console.error('[OpenAI] Transcription Error:', e);
             if (e instanceof LLMError) throw e;
             throw new LLMError(e instanceof Error ? e.message : 'Unknown error', 'openai');
         }
@@ -244,8 +246,9 @@ export const OpenAIProvider: LLMProvider = {
                 // OpenAI Responses API structure can vary.
                 // It might be output[0].content or output[0].message.content or output[0].text depending on configuration.
                 // We'll try to find the content in a few likely places.
+                // Filter out reasoning chunks which might come first in gpt-5/reasoning models
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                const output = data.output?.[0] as any;
+                const output = (data.output as any[])?.find((o: any) => o.type !== 'reasoning') || data.output?.[0];
                 if (!output) return "";
 
                 // Case 1: output itself has content array (User's case)

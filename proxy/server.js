@@ -58,7 +58,8 @@ const server = http.createServer((req, res) => {
         headers: {
             ...req.headers,
             host: targetUrl.hostname
-        }
+        },
+        timeout: 300000 // 5 minutes static timeout
     };
 
     // Remove hop-by-hop headers
@@ -93,6 +94,9 @@ const server = http.createServer((req, res) => {
 
     req.pipe(proxyReq, { end: true });
 });
+
+server.headersTimeout = 300000; // 5 minutes
+server.requestTimeout = 300000; // 5 minutes
 
 server.listen(PORT, () => {
     console.log(`CORS Proxy running on port ${PORT}`);
