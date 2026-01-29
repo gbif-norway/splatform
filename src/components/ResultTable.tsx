@@ -1,6 +1,6 @@
 import { Card } from './ui-misc';
 import { Button } from './ui-elements';
-import { Copy, Check, AlertTriangle, FileJson, FileText, ArrowRight } from 'lucide-react';
+import { Copy, Check, AlertTriangle, FileJson, Table as TableIcon, ArrowRight } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { cn } from '../utils/cn';
 import type { GBIFOccurrence } from '../services/gbif';
@@ -15,7 +15,7 @@ interface ResultTableProps {
 
 export function ResultTable({ step1Result, step2Result, isLoading, currentStep, gbifData }: ResultTableProps) {
     const [copied, setCopied] = useState<string | null>(null);
-    const [showRaw, setShowRaw] = useState(false);
+    const [viewMode, setViewMode] = useState<'table' | 'json'>('table');
 
     const { isValidJson, parsedJson } = useMemo(() => {
         if (!step2Result) return { isValidJson: false, parsedJson: null };
@@ -44,9 +44,9 @@ export function ResultTable({ step1Result, step2Result, isLoading, currentStep, 
     if (!step1Result && !step2Result && !isLoading) return null;
 
     return (
-        <div className="grid md:grid-cols-2 gap-6 w-full">
+        <div className="flex flex-col gap-6 w-full">
             {/* Step 1 Result */}
-            <Card className="p-4 flex flex-col h-full">
+            <Card className="p-4 flex flex-col">
                 <div className="flex items-center justify-between mb-4 pb-2 border-b border-border">
                     <h3 className="font-semibold text-primary">Step 1: Transcription</h3>
                     {step1Result && (
@@ -56,7 +56,7 @@ export function ResultTable({ step1Result, step2Result, isLoading, currentStep, 
                     )}
                 </div>
 
-                <div className="flex-1 min-h-[200px] overflow-auto rounded bg-surface p-4 border border-border font-mono text-sm whitespace-pre-wrap text-foreground">
+                <div className="flex-1 min-h-[150px] overflow-auto rounded bg-surface p-4 border border-border font-mono text-sm whitespace-pre-wrap text-foreground">
                     {isLoading && currentStep === 1 ? (
                         <div className="animate-pulse flex space-x-4">
                             <div className="flex-1 space-y-4 py-1">
@@ -70,7 +70,7 @@ export function ResultTable({ step1Result, step2Result, isLoading, currentStep, 
             </Card>
 
             {/* Step 2 Result */}
-            <Card className="p-4 flex flex-col h-full">
+            <Card className="p-4 flex flex-col">
                 <div className="flex items-center justify-between mb-4 pb-2 border-b border-border">
                     <h3 className="font-semibold text-accent flex items-center gap-2">
                         Step 2: Standardization
@@ -85,20 +85,48 @@ export function ResultTable({ step1Result, step2Result, isLoading, currentStep, 
                         )}
                     </h3>
                     {step2Result && (
-                        <div className="flex gap-1">
-                            <Button variant="ghost" size="sm" onClick={() => setShowRaw(!showRaw)} className="h-8 w-8 p-0" title={showRaw ? "Show Formatted" : "Show Raw"}>
-                                {showRaw ? <FileJson size={14} /> : <FileText size={14} />}
-                            </Button>
-                            <Button variant="ghost" size="sm" onClick={() => copyToClipboard(step2Result, 'step2')} className="h-8 w-8 p-0">
+                        <div className="flex items-center gap-2">
+                            {isValidJson && (
+                                <div className="flex items-center bg-surface-hover rounded-lg border border-border p-0.5 mr-2">
+                                    <button
+                                        onClick={() => setViewMode('table')}
+                                        className={cn(
+                                            "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-all",
+                                            viewMode === 'table'
+                                                ? "bg-background shadow-sm text-foreground"
+                                                : "text-foreground-muted hover:text-foreground"
+                                        )}
+                                    >
+                                        <TableIcon size={14} /> Table
+                                    </button>
+                                    <button
+                                        onClick={() => setViewMode('json')}
+                                        className={cn(
+                                            "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-all",
+                                            viewMode === 'json'
+                                                ? "bg-background shadow-sm text-foreground"
+                                                : "text-foreground-muted hover:text-foreground"
+                                        )}
+                                    >
+                                        <FileJson size={14} /> JSON
+                                    </button>
+                                </div>
+                            )}
+
+                            <Button variant="ghost" size="sm" onClick={() => copyToClipboard(step2Result, 'step2')} className="h-8 w-8 p-0" title="Copy Result">
                                 {copied === 'step2' ? <Check size={14} className="text-success" /> : <Copy size={14} />}
                             </Button>
                         </div>
                     )}
                 </div>
 
-                <div className={`flex-1 min-h-[200px] overflow-auto rounded bg-surface p-4 border border-border font-mono text-sm whitespace-pre-wrap ${isValidJson && !showRaw ? 'text-success' : 'text-foreground'}`}>
+                <div className={cn(
+                    "flex-1 min-h-[150px] overflow-auto rounded bg-surface border border-border",
+                    viewMode === 'json' ? "p-4 font-mono text-sm whitespace-pre-wrap" : "p-0",
+                    isValidJson && viewMode === 'json' ? 'text-success' : 'text-foreground'
+                )}>
                     {isLoading && currentStep === 2 ? (
-                        <div className="animate-pulse flex space-x-4">
+                        <div className="p-4 animate-pulse flex space-x-4">
                             <div className="flex-1 space-y-4 py-1">
                                 <div className="h-4 bg-surface-hover rounded w-3/4"></div>
                                 <div className="h-4 bg-surface-hover rounded"></div>
@@ -107,10 +135,35 @@ export function ResultTable({ step1Result, step2Result, isLoading, currentStep, 
                         </div>
                     ) : (
                         step2Result ? (
-                            isValidJson && !showRaw ? (
-                                <pre className="text-xs">{JSON.stringify(parsedJson, null, 2)}</pre>
+                            isValidJson ? (
+                                viewMode === 'table' ? (
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-sm text-left">
+                                            <thead className="text-xs text-foreground-muted uppercase bg-surface-hover border-b border-border">
+                                                <tr>
+                                                    <th className="px-6 py-3 font-semibold w-1/3">Field</th>
+                                                    <th className="px-6 py-3 font-semibold">Value</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-border">
+                                                {Object.entries(parsedJson).map(([key, value]) => (
+                                                    <tr key={key} className="bg-surface hover:bg-surface-hover transition-colors">
+                                                        <td className="px-6 py-4 font-medium text-primary font-mono whitespace-nowrap align-top">
+                                                            {key}
+                                                        </td>
+                                                        <td className="px-6 py-4 text-foreground whitespace-pre-wrap break-words align-top">
+                                                            {typeof value === 'object' ? JSON.stringify(value) : String(value)}
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                ) : (
+                                    <pre className="text-xs">{JSON.stringify(parsedJson, null, 2)}</pre>
+                                )
                             ) : (
-                                <>
+                                <div className="p-4">
                                     {!isValidJson && step2Result && (
                                         <div className="mb-4 bg-error/10 border border-error/20 p-3 rounded text-error text-xs flex items-start gap-2">
                                             <AlertTriangle size={14} className="mt-0.5 shrink-0" />
@@ -121,16 +174,16 @@ export function ResultTable({ step1Result, step2Result, isLoading, currentStep, 
                                         </div>
                                     )}
                                     {step2Result}
-                                </>
+                                </div>
                             )
-                        ) : (isLoading && currentStep < 2 ? "Pending Step 1..." : "No result yet")
+                        ) : (isLoading && currentStep < 2 ? <div className="p-4">Pending Step 1...</div> : <div className="p-4">No result yet</div>)
                     )}
                 </div>
             </Card>
 
             {/* Comparison Section (Full Width) */}
             {gbifData && step2Result && isValidJson && (
-                <Card className="md:col-span-2 p-6 bg-surface shadow-lg">
+                <Card className="p-6 bg-surface shadow-lg">
                     <div className="flex items-center gap-2 mb-6 pb-2 border-b border-border">
                         <ArrowRight className="text-primary" size={20} />
                         <h3 className="text-lg font-bold text-foreground">Detailed Comparison: AI vs. GBIF</h3>
