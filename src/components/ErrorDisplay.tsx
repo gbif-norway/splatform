@@ -1,14 +1,14 @@
-import { X, Copy, Check } from 'lucide-react';
+import { X, Copy, Check, Github } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from './ui-elements';
 import { Card } from './ui-misc';
 
 interface ErrorContext {
-    provider: string;
-    model: string;
-    stage: 'transcription' | 'standardization';
-    prompt: string;
-    rawError: any;
+    provider?: string;
+    model?: string;
+    stage?: string; // 'transcription' | 'standardization' or generic
+    prompt?: string;
+    rawError?: any;
 }
 
 interface ErrorDisplayProps {
@@ -28,9 +28,9 @@ export function ErrorDisplay({ error, context, onClose }: ErrorDisplayProps) {
 **Time**: ${new Date().toISOString()}
 
 **Context**:
-- **Operation**: ${context?.stage}
-- **Provider**: ${context?.provider}
-- **Model**: ${context?.model}
+${context?.stage ? `- **Operation**: ${context.stage}` : ''}
+${context?.provider ? `- **Provider**: ${context.provider}` : ''}
+${context?.model ? `- **Model**: ${context.model}` : ''}
 
 **Raw Error Object**:
 \`\`\`json
@@ -41,6 +41,9 @@ ${JSON.stringify(context?.rawError || {}, null, 2)}
 \`\`\`
 ${error.stack}
 \`\`\`
+
+**User Agent**:
+${navigator.userAgent}
 `;
     };
 
@@ -48,6 +51,13 @@ ${error.stack}
         navigator.clipboard.writeText(generateReport());
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
+    };
+
+    const handleReportIssue = () => {
+        const title = encodeURIComponent(`[Bug] ${error.name}: ${error.message}`);
+        const body = encodeURIComponent(generateReport());
+        const url = `https://github.com/gbif-norway/splatform/issues/new?title=${title}&body=${body}`;
+        window.open(url, '_blank');
     };
 
     return (
@@ -66,40 +76,55 @@ ${error.stack}
                     </div>
 
                     <p className="text-foreground-muted text-sm">
-                        An error occurred while communicating with the AI provider.
+                        An error occurred. You can report this issue to help us fix it.
                         Below is the technical information useful for debugging.
-                        You can copy this and send it to your developer or AI assistant to fix the issue.
                     </p>
 
                     <div className="space-y-2">
                         <h3 className="text-xs font-bold text-foreground-muted uppercase tracking-wider">Technical Details</h3>
                         <div className="bg-surface rounded-lg p-4 font-mono text-xs text-foreground overflow-x-auto border border-border">
                             <div className="grid grid-cols-[100px_1fr] gap-2 mb-4">
-                                <span className="text-foreground-muted">Provider:</span>
-                                <span className="text-primary font-bold">{context?.provider}</span>
+                                {context?.provider && (
+                                    <>
+                                        <span className="text-foreground-muted">Provider:</span>
+                                        <span className="text-primary font-bold">{context.provider}</span>
+                                    </>
+                                )}
 
-                                <span className="text-foreground-muted">Model:</span>
-                                <span className="text-accent font-bold">{context?.model}</span>
+                                {context?.model && (
+                                    <>
+                                        <span className="text-foreground-muted">Model:</span>
+                                        <span className="text-accent font-bold">{context.model}</span>
+                                    </>
+                                )}
 
-                                <span className="text-foreground-muted">Stage:</span>
-                                <span className="text-primary">{context?.stage}</span>
+                                {context?.stage && (
+                                    <>
+                                        <span className="text-foreground-muted">Stage:</span>
+                                        <span className="text-primary">{context.stage}</span>
+                                    </>
+                                )}
                             </div>
 
                             <div className="border-t border-border pt-3 mt-2">
                                 <span className="text-foreground-muted block mb-2">Full Error:</span>
                                 <pre className="whitespace-pre-wrap text-foreground-muted">
-                                    {JSON.stringify(context?.rawError, null, 2)}
+                                    {JSON.stringify(context?.rawError || error, null, 2)}
                                 </pre>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div className="p-4 border-t border-border bg-surface/50 flex justify-end gap-3">
+                <div className="p-4 border-t border-border bg-surface/50 flex justify-end gap-3 flex-wrap">
                     <Button variant="secondary" onClick={onClose}>Close</Button>
-                    <Button onClick={handleCopy}>
+                    <Button variant="secondary" onClick={handleCopy}>
                         {copied ? <Check size={16} className="mr-2" /> : <Copy size={16} className="mr-2" />}
-                        {copied ? 'Copied Report' : 'Copy Debug Report'}
+                        {copied ? 'Copied' : 'Copy'}
+                    </Button>
+                    <Button onClick={handleReportIssue} className="bg-[#2da44e] hover:bg-[#2c974b] text-white border-0">
+                        <Github size={16} className="mr-2" />
+                        Report on GitHub
                     </Button>
                 </div>
             </Card>
