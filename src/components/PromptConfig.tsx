@@ -88,10 +88,11 @@ export function PromptConfig({
                     onChange={(e) => setPrompt(e.target.value)}
                     placeholder={step === 1 ? "Example: Transcribe all text..." : "Example: Standardize to DWC JSON..."}
                     className={cn("font-mono text-sm", compact ? "min-h-[60px]" : "min-h-[100px]")}
+                    autoResize={true}
                 />
             </div>
 
-            {!compact && <div className="space-y-3 pt-2">
+            <div className="space-y-3 pt-2">
                 <div className="flex items-center justify-between">
                     <Label className="mb-0">Model Temperature</Label>
                     <span className="text-xs font-mono bg-surface px-2 py-0.5 rounded border border-border text-primary">{temperature.toFixed(2)}</span>
@@ -107,7 +108,7 @@ export function PromptConfig({
                         className="flex-1 accent-primary bg-surface h-1.5 rounded-lg appearance-none cursor-pointer border border-border"
                     />
                 </div>
-            </div>}
+            </div>
         </Card>
     );
 }
