@@ -1,0 +1,398 @@
+import { useState, useRef } from 'react';
+import { Button } from './ui-elements';
+import { Card } from './ui-misc';
+import { Play, Download, CheckCircle, Clock, Loader, RefreshCw, XCircle } from 'lucide-react';
+import { GBIFService } from '../services/gbif';
+import { LLMService } from '../services/llm';
+import { BarcodeService } from '../services/barcode';
+import { processImage } from '../utils/image';
+import { cn } from '../utils/cn';
+
+interface BatchItem {
+    id: string;
+    originalInput: string;
+    imageUrl?: string;
+    status: 'pending' | 'processing' | 'completed' | 'failed';
+    step: 'resolving' | 'scanning' | 'transcribing' | 'standardizing' | 'done';
+    transcription?: string;
+    standardization?: string; // JSON string
+    detectedCodes?: string[];
+    error?: string;
+    gbifData?: any;
+}
+
+interface BatchProcessorProps {
+    settings: any;
+    prompt1: string;
+    provider1: string;
+    model1: string;
+    temp1: number;
+    prompt2: string;
+    provider2: string;
+    model2: string;
+    temp2: number;
+}
+
+export function BatchProcessor({
+    settings,
+    prompt1, provider1, model1, temp1,
+    prompt2, provider2, model2, temp2
+}: BatchProcessorProps) {
+    const [input, setInput] = useState('');
+    const [items, setItems] = useState<BatchItem[]>([]);
+    const [isProcessing, setIsProcessing] = useState(false);
+    const stopRef = useRef(false);
+
+    // Stats
+    const total = items.length;
+    const success = items.filter(i => i.status === 'completed').length;
+    const failed = items.filter(i => i.status === 'failed').length;
+
+    const handleParse = () => {
+        const lines = input.split('\n').filter(l => l.trim().length > 0);
+        const newItems: BatchItem[] = lines.map(line => ({
+            id: crypto.randomUUID(),
+            originalInput: line.trim(),
+            status: 'pending',
+            step: 'resolving'
+        }));
+        setItems(newItems);
+    };
+
+    const processItem = async (item: BatchItem, updateItem: (id: string, updates: Partial<BatchItem>) => void) => {
+        if (stopRef.current) return;
+
+        updateItem(item.id, { status: 'processing', error: undefined, step: 'resolving' });
+
+        try {
+            // 1. Resolve Image
+            let imageUrl = item.originalInput;
+            let gbifData = null;
+
+            // Check if it's a GBIF ID or URL
+            const gbifId = GBIFService.parseOccurrenceId(item.originalInput);
+            if (gbifId) {
+                try {
+                    const occurrence = await GBIFService.fetchOccurrence(gbifId);
+                    const extractedImg = GBIFService.extractImage(occurrence);
+                    if (!extractedImg) throw new Error("No image found in GBIF occurrence");
+                    imageUrl = extractedImg;
+                    gbifData = occurrence;
+                } catch (e: any) {
+                    throw new Error(`GBIF Resolution Failed: ${e.message}`);
+                }
+            }
+
+            // Process Image (standardize/resize/base64)
+            const base64Image = await processImage(imageUrl, 0); // 0 rotation
+
+            updateItem(item.id, { imageUrl: imageUrl, gbifData, step: 'scanning' });
+
+            // 1.5 Scan for Barcodes
+            let detectedCodes: string[] = [];
+            if (settings.enableBarcodeScanning) {
+                try {
+                    // For batch items, we usually have a URL.
+                    // To get best results, we should try to fetch the blob to scan it directly, rather than using the potentially resized base64Image
+                    // However, we already validated/processed it. 
+                    // processImage returns a resized base64. 
+
+                    // If we want high-res scanning, we should fetch the blob.
+                    // But we don't want to double-fetch if we can avoid it. 
+                    // processImage (utils) handles the fetch internally.
+
+                    // Optimization: Let's use the base64Image we have (from processImage).
+                    // If the user says "it didn't find them", it might be resolution.
+                    // Let's rely on processImage's max width (2048) which should be enough for most barcodes.
+                    // IF we want to be super safe, we fetch blob here.
+
+                    // Let's try to fetch blob for scanning specifically to ensure quality.
+                    // This adds a network request but ensures we scan the original.
+                    try {
+                        const response = await fetch(imageUrl);
+                        const blob = await response.blob();
+                        const file = new File([blob], "scan.jpg", { type: blob.type });
+                        // Pass base64Image as fallback
+                        detectedCodes = await BarcodeService.scanImage(file, base64Image);
+                    } catch (fetchErr) {
+                        // Fallback to base64 if fetch fails (cors?)
+                        detectedCodes = await BarcodeService.scanImage(base64Image);
+                    }
+                } catch (scanErr) {
+                    console.warn("Barcode scanning failed for item", item.id, scanErr);
+                }
+            }
+
+            updateItem(item.id, { detectedCodes, step: 'transcribing' });
+
+            // 2. Transcribe (step 1)
+            const p1Key = settings[`${provider1}Key`];
+            if (!p1Key) throw new Error(`Missing API Key for ${provider1}`);
+
+            const provider1Inst = LLMService.getProvider(provider1);
+            const m1 = model1 || (provider1 === 'openai' ? 'gpt-4o' : provider1 === 'gemini' ? 'gemini-1.5-flash' : provider1 === 'anthropic' ? 'claude-3-5-sonnet-20240620' : 'grok-vision-beta');
+
+            const r1 = await provider1Inst.generateTranscription(
+                p1Key,
+                m1,
+                base64Image,
+                prompt1,
+                settings.proxyUrl,
+                { temperature: temp1 }
+            );
+
+            updateItem(item.id, { transcription: r1, step: 'standardizing' });
+
+            // 3. Standardize (step 2)
+            const p2Key = settings[`${provider2}Key`] || p1Key;
+            if (!p2Key && provider1 !== provider2) throw new Error(`Missing API Key for ${provider2}`);
+
+            const provider2Inst = LLMService.getProvider(provider2);
+            const m2 = model2 || (provider2 === 'openai' ? 'gpt-4o' : provider2 === 'gemini' ? 'gemini-1.5-flash' : provider2 === 'anthropic' ? 'claude-3-5-sonnet-20240620' : 'grok-vision-beta');
+
+            const r2 = await provider2Inst.standardizeText(
+                p2Key,
+                m2,
+                r1,
+                prompt2,
+                settings.proxyUrl,
+                { temperature: temp2 }
+            );
+
+            updateItem(item.id, { standardization: r2, status: 'completed', step: 'done' });
+
+        } catch (e: any) {
+            console.error(`Item ${item.id} failed:`, e);
+            updateItem(item.id, { status: 'failed', error: e.message || String(e) });
+        }
+    };
+
+    const handleRunBatch = async () => {
+        if (items.length === 0) handleParse();
+        setIsProcessing(true);
+        stopRef.current = false;
+
+        const queue = items.filter(i => i.status === 'pending' || i.status === 'failed');
+
+        const updateItem = (id: string, updates: Partial<BatchItem>) => {
+            setItems(prev => prev.map(item => item.id === id ? { ...item, ...updates } : item));
+        };
+
+        for (const item of queue) {
+            if (stopRef.current) break;
+            await processItem(item, updateItem);
+        }
+
+        setIsProcessing(false);
+    };
+
+    const handleRetry = (id: string) => {
+        const itemIndex = items.findIndex(i => i.id === id);
+        if (itemIndex === -1) return;
+
+        const item = items[itemIndex];
+        const updateItem = (id: string, updates: Partial<BatchItem>) => {
+            setItems(prev => prev.map(item => item.id === id ? { ...item, ...updates } : item));
+        };
+
+        processItem(item, updateItem);
+    };
+
+    const handleDownload = () => {
+        const parseJSON = (str: string) => {
+            try {
+                return JSON.parse(str);
+            } catch (e) {
+                const match = str.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+                if (match) {
+                    try {
+                        return JSON.parse(match[1]);
+                    } catch (e2) {
+                        return null;
+                    }
+                }
+                return null;
+            }
+        };
+
+        const allKeys = new Set<string>();
+        items.forEach(item => {
+            if (item.standardization) {
+                const json = parseJSON(item.standardization);
+                if (json) {
+                    Object.keys(json).forEach(k => allKeys.add(k));
+                }
+            }
+        });
+
+        const sortedKeys = Array.from(allKeys).sort();
+
+        const baseHeaders = ["ID", "Input", "Status", "Detected Barcodes", "Transcription", "GBIF Specific Name", "Error"];
+        const headers = [...baseHeaders, ...sortedKeys];
+
+        const rows = items.map(item => {
+            let json: any = {};
+            if (item.standardization) {
+                const parsed = parseJSON(item.standardization);
+                if (parsed) json = parsed;
+            }
+
+            const rowData = [
+                item.id,
+                item.originalInput,
+                item.status,
+                (item.detectedCodes || []).join("; "),
+                item.transcription || "",
+                item.gbifData?.scientificName || "",
+                item.error || ""
+            ];
+
+            sortedKeys.forEach(key => {
+                const val = json[key];
+                rowData.push(val !== undefined && val !== null ? String(val) : "");
+            });
+
+            return rowData.map(val => `"${String(val).replace(/"/g, '""')}"`);
+        });
+
+        const csvContent = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute("download", `batch_results_${new Date().toISOString()}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
+    return (
+        <div className="flex flex-col h-full gap-6">
+            <Card className="p-6 flex flex-col gap-4">
+                <div className="flex justify-between items-center">
+                    <h3 className="font-semibold text-lg">Batch Input</h3>
+                    <div className="text-xs text-foreground-muted">Supported: Direct Image URLs, GBIF Occurrence URLs</div>
+                </div>
+                <textarea
+                    className="w-full h-32 bg-background border border-border rounded-lg p-3 text-sm font-mono"
+                    placeholder="https://example.com/image1.jpg&#10;https://www.gbif.org/occurrence/123456"
+                    value={input}
+                    onChange={e => setInput(e.target.value)}
+                    disabled={isProcessing}
+                />
+                <div className="flex justify-end gap-2">
+                    <Button variant="secondary" onClick={handleParse} disabled={isProcessing || !input.trim()}>
+                        Reset / Parse
+                    </Button>
+                    <Button onClick={handleRunBatch} disabled={isProcessing || (!items.length && !input.trim())}>
+                        {isProcessing ? <Loader className="animate-spin mr-2" size={16} /> : <Play className="mr-2" size={16} />}
+                        {isProcessing ? 'Processing...' : 'Run Batch'}
+                    </Button>
+                    {isProcessing && (
+                        <Button variant="danger" onClick={() => (stopRef.current = true)}>Stop</Button>
+                    )}
+                </div>
+            </Card>
+
+            {items.length > 0 && (
+                <div className="grid grid-cols-4 gap-4">
+                    <Card className="p-4 flex items-center justify-between border-l-4 border-l-primary">
+                        <div>
+                            <div className="text-xs text-foreground-muted uppercase font-bold">Total</div>
+                            <div className="text-2xl font-bold">{total}</div>
+                        </div>
+                        <div className="p-2 bg-primary/10 rounded-full text-primary"><Clock size={20} /></div>
+                    </Card>
+                    <Card className="p-4 flex items-center justify-between border-l-4 border-l-success">
+                        <div>
+                            <div className="text-xs text-foreground-muted uppercase font-bold">Success</div>
+                            <div className="text-2xl font-bold">{success}</div>
+                        </div>
+                        <div className="p-2 bg-success/10 rounded-full text-success"><CheckCircle size={20} /></div>
+                    </Card>
+                    <Card className="p-4 flex items-center justify-between border-l-4 border-l-destructive">
+                        <div>
+                            <div className="text-xs text-foreground-muted uppercase font-bold">Failed</div>
+                            <div className="text-2xl font-bold">{failed}</div>
+                        </div>
+                        <div className="p-2 bg-destructive/10 rounded-full text-destructive"><XCircle size={20} /></div>
+                    </Card>
+                    <div className="flex items-end justify-end">
+                        <Button variant="secondary" onClick={handleDownload} disabled={success === 0}>
+                            <Download className="mr-2" size={16} /> Download CSV
+                        </Button>
+                    </div>
+                </div>
+            )}
+
+            {items.length > 0 && (
+                <div className="flex-1 overflow-auto border border-border rounded-lg bg-surface">
+                    <table className="w-full text-sm text-left">
+                        <thead className="bg-background text-foreground-muted font-medium text-xs uppercase tracking-wider sticky top-0">
+                            <tr>
+                                <th className="px-4 py-3 border-b border-border">Input / ID</th>
+                                <th className="px-4 py-3 border-b border-border">Status</th>
+                                <th className="px-4 py-3 border-b border-border">Result Preview</th>
+                                <th className="px-4 py-3 border-b border-border text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-border">
+                            {items.map(item => (
+                                <tr key={item.id} className="hover:bg-surface-hover/50">
+                                    <td className="px-4 py-3 max-w-[200px] truncate" title={item.originalInput}>
+                                        {item.originalInput}
+                                        {item.imageUrl && item.imageUrl !== item.originalInput && (
+                                            <div className="text-xs text-foreground-muted truncate">{item.imageUrl}</div>
+                                        )}
+                                    </td>
+                                    <td className="px-4 py-3">
+                                        <div className="flex items-center gap-2">
+                                            {item.status === 'processing' && <Loader size={14} className="animate-spin text-primary" />}
+                                            {item.status === 'completed' && <CheckCircle size={14} className="text-success" />}
+                                            {item.status === 'failed' && <XCircle size={14} className="text-destructive" />}
+                                            {item.status === 'pending' && <Clock size={14} className="text-foreground-muted" />}
+                                            <span className={cn(
+                                                "capitalize",
+                                                item.status === 'failed' ? "text-destructive" :
+                                                    item.status === 'completed' ? "text-success" : ""
+                                            )}>
+                                                {item.status === 'processing' ? item.step : item.status}
+                                            </span>
+                                        </div>
+                                    </td>
+                                    <td className="px-4 py-3 max-w-[300px]">
+                                        <div className="flex flex-col gap-1">
+                                            {item.detectedCodes && item.detectedCodes.length > 0 && (
+                                                <div className="flex flex-wrap gap-1">
+                                                    {item.detectedCodes.map((code, idx) => (
+                                                        <span key={idx} className="text-[10px] bg-accent/10 text-accent px-1.5 py-0.5 rounded border border-accent/20 font-mono">
+                                                            {code}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            )}
+                                            {item.error ? (
+                                                <span className="text-destructive text-xs">{item.error}</span>
+                                            ) : (
+                                                <div className="text-xs text-foreground-muted truncate">
+                                                    {item.standardization || item.transcription || "-"}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </td>
+                                    <td className="px-4 py-3 text-right">
+                                        {item.status === 'failed' && (
+                                            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleRetry(item.id)} title="Retry">
+                                                <RefreshCw size={14} />
+                                            </Button>
+                                        )}
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            )}
+        </div>
+    );
+}

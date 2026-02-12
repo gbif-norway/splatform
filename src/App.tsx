@@ -3,14 +3,17 @@ import { useState, useEffect } from 'react';
 import { Settings } from './components/Settings';
 import { ImageUploader } from './components/ImageUploader';
 import { PromptConfig } from './components/PromptConfig';
+import { BatchProcessor } from './components/BatchProcessor';
 import { ResultTable } from './components/ResultTable';
 import { History } from './components/History';
 import { ErrorDisplay } from './components/ErrorDisplay';
 import { Button } from './components/ui-elements';
-import { Settings as SettingsIcon, History as HistoryIcon, Play, Github, Sun, Moon, X } from 'lucide-react';
+import { Settings as SettingsIcon, History as HistoryIcon, Play, Github, Sun, Moon, X, Layers, Image as ImageIcon } from 'lucide-react';
+import { cn } from './utils/cn';
 import { useSettings } from './hooks/useSettings';
 import { useTheme } from './hooks/useTheme';
 import { LLMService } from './services/llm';
+import { BarcodeService } from './services/barcode';
 import { StorageService, type TranscribedItem } from './services/storage';
 import type { GBIFOccurrence } from './services/gbif';
 
@@ -19,6 +22,7 @@ function App() {
   const { theme, toggleTheme } = useTheme();
   const [showSettings, setShowSettings] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [mode, setMode] = useState<'single' | 'batch'>('single');
 
   // Error State
   const [errorState, setErrorState] = useState<{
@@ -28,7 +32,9 @@ function App() {
 
   // Workflow State
   // Workflow State
+  // Workflow State
   const [image, setImage] = useState<string>('');
+  const [imageFile, setImageFile] = useState<File | null>(null);
 
   // NOTE: Initial state must come from localStorage immediately if possible, or use useEffect to hydrate
   // But useState initializer is better.
@@ -52,6 +58,7 @@ function App() {
   const [step, setStep] = useState(0); // 1 = transcribing, 2 = standardizing
   const [historyTrigger, setHistoryTrigger] = useState(0);
   const [gbifData, setGbifData] = useState<GBIFOccurrence | null>(null);
+  const [detectedBarcodes, setDetectedBarcodes] = useState<string[]>([]);
 
   // Auto-save session
   useEffect(() => {
@@ -84,10 +91,26 @@ function App() {
     setIsLoading(true);
     setResult1('');
     setResult2('');
+    setDetectedBarcodes([]);
 
     let currentPhase: 'transcription' | 'standardization' = 'transcription';
 
     try {
+      // Step 0: Scan Barcodes (Parallel with Step 1 start)
+      if (settings.enableBarcodeScanning) {
+        try {
+          // Use raw file if available for better quality, otherwise use the processed image string
+          // Pass 'image' (processed base64) as fallback.
+          const input = imageFile || image;
+          const fallback = imageFile ? image : undefined; // If input is raw file, fallback is processed image
+
+          const codes = await BarcodeService.scanImage(input, fallback);
+          setDetectedBarcodes(codes);
+        } catch (err) {
+          console.warn('Barcode scan failed:', err);
+        }
+      }
+
       // Step 1
       setStep(1);
       currentPhase = 'transcription';
@@ -186,6 +209,24 @@ function App() {
           </div>
 
           <div className="flex items-center gap-2">
+            <div className="bg-surface border border-border rounded-lg p-1 flex gap-1 mr-2">
+              <Button
+                variant={mode === 'single' ? 'primary' : 'ghost'}
+                size="sm"
+                className="h-7 px-2 text-xs"
+                onClick={() => setMode('single')}
+              >
+                <ImageIcon size={14} className="mr-1" /> Single
+              </Button>
+              <Button
+                variant={mode === 'batch' ? 'primary' : 'ghost'}
+                size="sm"
+                className="h-7 px-2 text-xs"
+                onClick={() => setMode('batch')}
+              >
+                <Layers size={14} className="mr-1" /> Batch
+              </Button>
+            </div>
             <Button variant="ghost" size="sm" onClick={toggleTheme} className="h-9 w-9 p-0" title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}>
               {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
             </Button>
@@ -204,113 +245,165 @@ function App() {
       </header>
 
       {/* Main Content */}
-      <main className="flex flex-col lg:flex-row min-h-[calc(100vh-64px)] pt-16">
-
-        {/* Left Column: Fixed Specimen Image */}
-        <aside className="lg:w-1/2 lg:sticky lg:top-16 lg:h-[calc(100vh-64px)] p-6 bg-surface/20 border-r border-border overflow-hidden flex flex-col gap-4 min-w-0">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-foreground-muted uppercase tracking-wider pl-1 flex items-center gap-2">
-              <span className="w-6 h-6 rounded-full bg-primary/20 text-primary flex items-center justify-center text-xs font-bold">1</span>
-              Specimen Image
-            </h2>
-          </div>
-          <ImageUploader
-            onImageReady={setImage}
-            onGBIFData={setGbifData}
-            className="flex-1 shadow-inner"
-          />
-        </aside>
-
-        {/* Right Column: Scrollable Config & Results */}
-        <section className="lg:w-1/2 flex flex-col min-w-0">
-
-          {/* Sub Navigation Bar */}
-          <nav className="sticky top-16 z-40 bg-background/95 backdrop-blur-md border-b border-border px-6 py-2 flex items-center gap-4 justify-center sm:justify-start">
-            <a href="#config" className="text-xs font-bold uppercase tracking-widest text-foreground-muted hover:text-primary transition-colors px-2 py-1 rounded">Pipeline</a>
-            <div className="w-px h-3 bg-border"></div>
-            <a href="#results" className="text-xs font-bold uppercase tracking-widest text-foreground-muted hover:text-primary transition-colors px-2 py-1 rounded">Results</a>
-            <div className="flex-1"></div>
-            <div className="hidden sm:flex items-center gap-2">
-              {isLoading && (
-                <div className="flex items-center gap-2 animate-pulse text-[10px] font-bold uppercase tracking-tighter text-info">
-                  <div className="w-1.5 h-1.5 rounded-full bg-info"></div>
-                  {step === 1 ? 'Transcribing...' : 'Standardizing...'}
-                </div>
-              )}
-            </div>
-          </nav>
-
-          {/* Scrollable Content Container */}
-          <div className="p-6 space-y-12">
-
-            {/* Step 2: Pipeline Configuration */}
-            <div id="config" className="scroll-mt-32 space-y-6">
+      <main className={cn(
+        "min-h-[calc(100vh-64px)]",
+        mode === 'single' ? "flex flex-col lg:flex-row pt-16" : "container mx-auto px-4 pb-8 pt-24"
+      )}>
+        {mode === 'single' ? (
+          <>
+            {/* Left Column: Fixed Specimen Image */}
+            <aside className="lg:w-1/2 lg:sticky lg:top-16 lg:h-[calc(100vh-64px)] p-6 bg-surface/20 border-r border-border overflow-hidden flex flex-col gap-4 min-w-0">
               <div className="flex items-center justify-between">
                 <h2 className="text-sm font-semibold text-foreground-muted uppercase tracking-wider pl-1 flex items-center gap-2">
-                  <span className="w-6 h-6 rounded-full bg-accent/20 text-accent flex items-center justify-center text-xs font-bold">2</span>
-                  Pipeline Configuration
+                  <span className="w-6 h-6 rounded-full bg-primary/20 text-primary flex items-center justify-center text-xs font-bold">1</span>
+                  Specimen Image
                 </h2>
               </div>
+              <ImageUploader
+                onImageReady={setImage}
+                onGBIFData={setGbifData}
+                onFileSelect={setImageFile}
+                className="flex-1 shadow-inner"
+              />
+            </aside>
 
-              <div className="flex flex-col gap-6">
-                <PromptConfig
-                  step={1}
-                  prompt={prompt1}
-                  setPrompt={setPrompt1}
-                  selectedModel={model1}
-                  setSelectedModel={setModel1}
-                  selectedProvider={provider1}
-                  setSelectedProvider={setProvider1}
-                  temperature={temp1}
-                  setTemperature={setTemp1}
-                />
-                <PromptConfig
-                  step={2}
-                  prompt={prompt2}
-                  setPrompt={setPrompt2}
-                  selectedModel={model2}
-                  setSelectedModel={setModel2}
-                  selectedProvider={provider2}
-                  setSelectedProvider={setProvider2}
-                  temperature={temp2}
-                  setTemperature={setTemp2}
-                />
-              </div>
+            {/* Right Column: Scrollable Config & Results */}
+            <section className="lg:w-1/2 flex flex-col min-w-0">
 
-              <div className="relative group">
-                <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg blur opacity-25 group-hover:opacity-75 transition duration-1000 group-hover:duration-200"></div>
-                <Button
-                  className="relative w-full text-lg py-6 bg-surface border border-border hover:bg-surface-hover transition-all font-semibold tracking-wide"
-                  onClick={handleRun}
-                  disabled={isLoading || !image}
-                  isLoading={isLoading}
-                >
-                  {!isLoading && <Play size={20} className="mr-3 fill-primary text-primary" />}
-                  <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-                    {isLoading ? (step === 1 ? "Transcribing Image..." : "Standardizing Text...") : "Execute Pipeline"}
-                  </span>
-                </Button>
+              {/* Sub Navigation Bar */}
+              <nav className="sticky top-16 z-40 bg-background/95 backdrop-blur-md border-b border-border px-6 py-2 flex items-center gap-4 justify-center sm:justify-start">
+                <a href="#config" className="text-xs font-bold uppercase tracking-widest text-foreground-muted hover:text-primary transition-colors px-2 py-1 rounded">Pipeline</a>
+                <div className="w-px h-3 bg-border"></div>
+                <a href="#results" className="text-xs font-bold uppercase tracking-widest text-foreground-muted hover:text-primary transition-colors px-2 py-1 rounded">Results</a>
+                <div className="flex-1"></div>
+                <div className="hidden sm:flex items-center gap-2">
+                  {isLoading && (
+                    <div className="flex items-center gap-2 animate-pulse text-[10px] font-bold uppercase tracking-tighter text-info">
+                      <div className="w-1.5 h-1.5 rounded-full bg-info"></div>
+                      {step === 1 ? 'Transcribing...' : 'Standardizing...'}
+                    </div>
+                  )}
+                </div>
+              </nav>
+
+              {/* Scrollable Content Container */}
+              <div className="p-6 space-y-12">
+
+                {/* Step 2: Pipeline Configuration */}
+                <div id="config" className="scroll-mt-32 space-y-6">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-sm font-semibold text-foreground-muted uppercase tracking-wider pl-1 flex items-center gap-2">
+                      <span className="w-6 h-6 rounded-full bg-accent/20 text-accent flex items-center justify-center text-xs font-bold">2</span>
+                      Pipeline Configuration
+                    </h2>
+                  </div>
+
+                  <div className="flex flex-col gap-6">
+                    <PromptConfig
+                      step={1}
+                      prompt={prompt1}
+                      setPrompt={setPrompt1}
+                      selectedModel={model1}
+                      setSelectedModel={setModel1}
+                      selectedProvider={provider1}
+                      setSelectedProvider={setProvider1}
+                      temperature={temp1}
+                      setTemperature={setTemp1}
+                    />
+                    <PromptConfig
+                      step={2}
+                      prompt={prompt2}
+                      setPrompt={setPrompt2}
+                      selectedModel={model2}
+                      setSelectedModel={setModel2}
+                      selectedProvider={provider2}
+                      setSelectedProvider={setProvider2}
+                      temperature={temp2}
+                      setTemperature={setTemp2}
+                    />
+                  </div>
+
+                  <div className="relative group">
+                    <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg blur opacity-25 group-hover:opacity-75 transition duration-1000 group-hover:duration-200"></div>
+                    <Button
+                      className="relative w-full text-lg py-6 bg-surface border border-border hover:bg-surface-hover transition-all font-semibold tracking-wide"
+                      onClick={handleRun}
+                      disabled={isLoading || !image}
+                      isLoading={isLoading}
+                    >
+                      {!isLoading && <Play size={20} className="mr-3 fill-primary text-primary" />}
+                      <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                        {isLoading ? (step === 1 ? "Transcribing Image..." : "Standardizing Text...") : "Execute Pipeline"}
+                      </span>
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Step 3: Results */}
+                <div id="results" className="scroll-mt-32 space-y-6">
+                  <div className="flex justify-between items-center">
+                    <h2 className="text-sm font-semibold text-foreground-muted uppercase tracking-wider pl-1 flex items-center gap-2">
+                      <span className="w-6 h-6 rounded-full bg-primary/20 text-primary flex items-center justify-center text-xs font-bold">3</span>
+                      Extraction Results
+                    </h2>
+                  </div>
+                  <ResultTable
+                    step1Result={result1}
+                    step2Result={result2}
+                    isLoading={isLoading}
+                    currentStep={step}
+                    gbifData={gbifData || undefined}
+                    detectedBarcodes={detectedBarcodes}
+                  />
+                </div>
               </div>
+            </section>
+          </>
+        ) : (
+          <div className="w-full h-full flex flex-col gap-6">
+            {/* Batch Mode Configuration (Reusing Prompts) */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <PromptConfig
+                step={1}
+                prompt={prompt1}
+                setPrompt={setPrompt1}
+                selectedModel={model1}
+                setSelectedModel={setModel1}
+                selectedProvider={provider1}
+                setSelectedProvider={setProvider1}
+                temperature={temp1}
+                setTemperature={setTemp1}
+                compact
+              />
+              <PromptConfig
+                step={2}
+                prompt={prompt2}
+                setPrompt={setPrompt2}
+                selectedModel={model2}
+                setSelectedModel={setModel2}
+                selectedProvider={provider2}
+                setSelectedProvider={setProvider2}
+                temperature={temp2}
+                setTemperature={setTemp2}
+                compact
+              />
             </div>
 
-            {/* Step 3: Results */}
-            <div id="results" className="scroll-mt-32 space-y-6">
-              <div className="flex justify-between items-center">
-                <h2 className="text-sm font-semibold text-foreground-muted uppercase tracking-wider pl-1 flex items-center gap-2">
-                  <span className="w-6 h-6 rounded-full bg-primary/20 text-primary flex items-center justify-center text-xs font-bold">3</span>
-                  Extraction Results
-                </h2>
-              </div>
-              <ResultTable
-                step1Result={result1}
-                step2Result={result2}
-                isLoading={isLoading}
-                currentStep={step}
-                gbifData={gbifData || undefined}
+            <div className="flex-1 min-h-0">
+              <BatchProcessor
+                settings={settings}
+                prompt1={prompt1}
+                provider1={provider1}
+                model1={model1}
+                temp1={temp1}
+                prompt2={prompt2}
+                provider2={provider2}
+                model2={model2}
+                temp2={temp2}
               />
             </div>
           </div>
-        </section>
+        )}
       </main>
 
       {/* Modals/Sidebars */}
@@ -339,6 +432,9 @@ function App() {
           </div>
         </div>
       )}
+
+      {/* Hidden div for html5-qrcode */}
+      <div id="reader-hidden" className="hidden"></div>
 
     </div>
   )

@@ -13,6 +13,7 @@ interface PromptConfigProps {
     setSelectedProvider: (val: string) => void;
     temperature: number;
     setTemperature: (val: number) => void;
+    compact?: boolean;
 }
 
 export function PromptConfig({
@@ -24,7 +25,8 @@ export function PromptConfig({
     selectedProvider,
     setSelectedProvider,
     temperature,
-    setTemperature
+    setTemperature,
+    compact = false
 }: PromptConfigProps) {
     const { models } = useModels();
 
@@ -44,16 +46,19 @@ export function PromptConfig({
 
     return (
         <Card className={cn(
-            "p-4 space-y-4 border-l-4 bg-surface/60",
-            step === 1 ? "border-l-primary" : "border-l-accent"
+            "space-y-4 border-l-4 bg-surface/60",
+            step === 1 ? "border-l-primary" : "border-l-accent",
+            compact ? "p-3 space-y-2" : "p-4"
         )}>
             <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-foreground">Step {step}: {step === 1 ? 'Transcription' : 'Standardization'}</h3>
+                <h3 className={cn("font-semibold text-foreground", compact ? "text-sm" : "text-lg")}>
+                    Step {step}: {step === 1 ? 'Transcription' : 'Standardization'}
+                </h3>
                 <div className="flex gap-2">
                     <Select
                         value={selectedProvider}
                         onChange={handleProviderChange}
-                        className="w-32"
+                        className={cn(compact ? "w-24 text-xs" : "w-32")}
                     >
                         {providers.length === 0 && <option value="" disabled>No configured providers</option>}
                         {providers.map(p => (
@@ -63,10 +68,10 @@ export function PromptConfig({
                     <Select
                         value={selectedModel}
                         onChange={(e) => setSelectedModel(e.target.value)}
-                        className="w-48"
+                        className={cn(compact ? "w-32 text-xs" : "w-48")}
                     >
                         {filteredModels.length === 0 ? (
-                            <option value="">No models (Check API Key)</option>
+                            <option value="">No models</option>
                         ) : (
                             filteredModels.map(m => (
                                 <option key={m.id} value={m.id}>{m.name}</option>
@@ -77,16 +82,16 @@ export function PromptConfig({
             </div>
 
             <div className="space-y-1">
-                <Label>System Prompt</Label>
+                {!compact && <Label>System Prompt</Label>}
                 <Textarea
                     value={prompt}
                     onChange={(e) => setPrompt(e.target.value)}
                     placeholder={step === 1 ? "Example: Transcribe all text..." : "Example: Standardize to DWC JSON..."}
-                    className="min-h-[100px] font-mono text-sm"
+                    className={cn("font-mono text-sm", compact ? "min-h-[60px]" : "min-h-[100px]")}
                 />
             </div>
 
-            <div className="space-y-3 pt-2">
+            {!compact && <div className="space-y-3 pt-2">
                 <div className="flex items-center justify-between">
                     <Label className="mb-0">Model Temperature</Label>
                     <span className="text-xs font-mono bg-surface px-2 py-0.5 rounded border border-border text-primary">{temperature.toFixed(2)}</span>
@@ -101,12 +106,8 @@ export function PromptConfig({
                         onChange={(e) => setTemperature(parseFloat(e.target.value))}
                         className="flex-1 accent-primary bg-surface h-1.5 rounded-lg appearance-none cursor-pointer border border-border"
                     />
-                    <div className="flex justify-between w-full text-[10px] text-foreground-muted uppercase tracking-tighter absolute -bottom-5">
-                        <span>Focused</span>
-                        <span>Creative</span>
-                    </div>
                 </div>
-            </div>
+            </div>}
         </Card>
     );
 }

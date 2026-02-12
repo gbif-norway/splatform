@@ -10,11 +10,12 @@ import type { GBIFOccurrence } from '../services/gbif';
 interface ImageUploaderProps {
     onImageReady: (base64: string) => void;
     onGBIFData: (data: GBIFOccurrence | null) => void;
+    onFileSelect?: (file: File | null) => void;
     className?: string;
     currentImage?: string; // If we want to support controlled state fully
 }
 
-export function ImageUploader({ onImageReady, onGBIFData, className }: ImageUploaderProps) {
+export function ImageUploader({ onImageReady, onGBIFData, onFileSelect, className }: ImageUploaderProps) {
     const [file, setFile] = useState<File | null>(null);
     const [rotation, setRotation] = useState(0);
     const [preview, setPreview] = useState<string | null>(null);
@@ -54,6 +55,7 @@ export function ImageUploader({ onImageReady, onGBIFData, className }: ImageUplo
                 file.name.toLowerCase().endsWith('.tiff');
             if (isImage) {
                 setFile(file);
+                if (onFileSelect) onFileSelect(file);
                 setRotation(0);
             }
         }
@@ -63,6 +65,7 @@ export function ImageUploader({ onImageReady, onGBIFData, className }: ImageUplo
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             setFile(e.target.files[0]);
+            if (onFileSelect) onFileSelect(e.target.files[0]);
             setRotation(0);
         }
     };
@@ -133,7 +136,9 @@ export function ImageUploader({ onImageReady, onGBIFData, className }: ImageUplo
         setRotation(0);
         setGbifUrl('');
         setGbifError(null);
+        setGbifError(null);
         onImageReady('');
+        if (onFileSelect) onFileSelect(null);
         onGBIFData(null);
     };
 

@@ -24,6 +24,7 @@ export interface AppSettings {
     anthropicKey: string;
     xaiKey: string;
     proxyUrl: string;
+    enableBarcodeScanning: boolean;
 }
 
 const SETTINGS_KEY = 'slpat_settings';
@@ -38,7 +39,8 @@ export const StorageService = {
                 geminiKey: '',
                 anthropicKey: '',
                 xaiKey: '',
-                proxyUrl: import.meta.env.VITE_PROXY_URL || ''
+                proxyUrl: import.meta.env.VITE_PROXY_URL || '',
+                enableBarcodeScanning: true
             };
 
             if (!data) return defaults;
@@ -52,7 +54,8 @@ export const StorageService = {
                 geminiKey: '',
                 anthropicKey: '',
                 xaiKey: '',
-                proxyUrl: import.meta.env.VITE_PROXY_URL || ''
+                proxyUrl: import.meta.env.VITE_PROXY_URL || '',
+                enableBarcodeScanning: true
             };
         }
     },
