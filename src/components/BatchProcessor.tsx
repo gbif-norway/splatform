@@ -8,6 +8,9 @@ import { BarcodeService } from '../services/barcode';
 import { processImage } from '../utils/image';
 import { cn } from '../utils/cn';
 
+import { StorageService } from '../services/storage';
+import { robustJSONParse, type JSONParseStatus } from '../utils/json';
+
 interface BatchItem {
     id: string;
     originalInput: string;
@@ -15,7 +18,9 @@ interface BatchItem {
     status: 'pending' | 'processing' | 'completed' | 'failed';
     step: 'resolving' | 'scanning' | 'transcribing' | 'standardizing' | 'done';
     transcription?: string;
-    standardization?: string; // JSON string
+    standardization?: string; // Raw output
+    parsedData?: any; // The actual JSON object
+    parsingStatus?: JSONParseStatus;
     detectedCodes?: string[];
     error?: string;
     gbifData?: any;
@@ -159,7 +164,33 @@ export function BatchProcessor({
                 { temperature: temp2 }
             );
 
-            updateItem(item.id, { standardization: r2, status: 'completed', step: 'done' });
+            // Parse JSON immediately
+            const { data, status: parseStatus } = robustJSONParse(r2);
+
+            updateItem(item.id, {
+                standardization: r2,
+                parsedData: data,
+                parsingStatus: parseStatus,
+                status: 'completed',
+                step: 'done'
+            });
+
+            // Save to History
+            StorageService.addToHistory({
+                id: item.id,
+                timestamp: Date.now(),
+                filename: item.originalInput, // Use input as filename
+                prompt1,
+                result1: r1,
+                prompt2,
+                result2: r2,
+                provider1: `${provider1}/${m1}`,
+                temp1,
+                provider2: `${provider2}/${m2}`,
+                temp2,
+                mode: 'batch',
+                detectedCodes
+            });
 
         } catch (e: any) {
             console.error(`Item ${item.id} failed:`, e);
@@ -199,48 +230,27 @@ export function BatchProcessor({
     };
 
     const handleDownload = () => {
-        const parseJSON = (str: string) => {
-            try {
-                return JSON.parse(str);
-            } catch (e) {
-                const match = str.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
-                if (match) {
-                    try {
-                        return JSON.parse(match[1]);
-                    } catch (e2) {
-                        return null;
-                    }
-                }
-                return null;
-            }
-        };
 
         const allKeys = new Set<string>();
         items.forEach(item => {
-            if (item.standardization) {
-                const json = parseJSON(item.standardization);
-                if (json) {
-                    Object.keys(json).forEach(k => allKeys.add(k));
-                }
+            if (item.parsedData) {
+                Object.keys(item.parsedData).forEach(k => allKeys.add(k));
             }
         });
 
         const sortedKeys = Array.from(allKeys).sort();
 
-        const baseHeaders = ["ID", "Input", "Status", "Detected Barcodes", "Transcription", "GBIF Specific Name", "Error"];
+        const baseHeaders = ["ID", "Input", "Status", "JSON Status", "Detected Barcodes", "Transcription", "GBIF Specific Name", "Error"];
         const headers = [...baseHeaders, ...sortedKeys];
 
         const rows = items.map(item => {
-            let json: any = {};
-            if (item.standardization) {
-                const parsed = parseJSON(item.standardization);
-                if (parsed) json = parsed;
-            }
+            const json: any = item.parsedData || {};
 
             const rowData = [
                 item.id,
                 item.originalInput,
                 item.status,
+                item.parsingStatus || "",
                 (item.detectedCodes || []).join("; "),
                 item.transcription || "",
                 item.gbifData?.scientificName || "",
@@ -346,18 +356,32 @@ export function BatchProcessor({
                                         )}
                                     </td>
                                     <td className="px-4 py-3">
-                                        <div className="flex items-center gap-2">
-                                            {item.status === 'processing' && <Loader size={14} className="animate-spin text-primary" />}
-                                            {item.status === 'completed' && <CheckCircle size={14} className="text-success" />}
-                                            {item.status === 'failed' && <XCircle size={14} className="text-destructive" />}
-                                            {item.status === 'pending' && <Clock size={14} className="text-foreground-muted" />}
-                                            <span className={cn(
-                                                "capitalize",
-                                                item.status === 'failed' ? "text-destructive" :
-                                                    item.status === 'completed' ? "text-success" : ""
-                                            )}>
-                                                {item.status === 'processing' ? item.step : item.status}
-                                            </span>
+                                        <div className="flex flex-col gap-1">
+                                            <div className="flex items-center gap-2">
+                                                {item.status === 'processing' && <Loader size={14} className="animate-spin text-primary" />}
+                                                {item.status === 'completed' && <CheckCircle size={14} className="text-success" />}
+                                                {item.status === 'failed' && <XCircle size={14} className="text-destructive" />}
+                                                {item.status === 'pending' && <Clock size={14} className="text-foreground-muted" />}
+                                                <span className={cn(
+                                                    "capitalize",
+                                                    item.status === 'failed' ? "text-destructive" :
+                                                        item.status === 'completed' ? "text-success" : ""
+                                                )}>
+                                                    {item.status === 'processing' ? item.step : item.status}
+                                                </span>
+                                            </div>
+
+                                            {item.parsingStatus && item.status === 'completed' && (
+                                                <div className={cn(
+                                                    "text-[10px] px-1.5 py-0.5 rounded w-fit capitalize border",
+                                                    item.parsingStatus === 'clean' ? "bg-success/10 text-success border-success/20" :
+                                                        item.parsingStatus === 'markdown' ? "bg-info/10 text-info border-info/20" :
+                                                            item.parsingStatus === 'fuzzy' ? "bg-warning/10 text-warning border-warning/20" :
+                                                                "bg-destructive/10 text-destructive border-destructive/20"
+                                                )}>
+                                                    JSON: {item.parsingStatus}
+                                                </div>
+                                            )}
                                         </div>
                                     </td>
                                     <td className="px-4 py-3 max-w-[300px]">

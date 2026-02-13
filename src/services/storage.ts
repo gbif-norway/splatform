@@ -16,6 +16,8 @@ export interface TranscribedItem {
     temp1: number;
     provider2: string;
     temp2: number;
+    mode?: 'single' | 'batch';
+    detectedCodes?: string[];
 }
 
 export interface AppSettings {

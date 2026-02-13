@@ -2,6 +2,7 @@ import { StorageService, type TranscribedItem } from '../services/storage';
 import { Clock, Trash2, ArrowRight, Download } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { exportToTxt } from '../utils/export';
+import { cn } from '../utils/cn';
 
 interface HistoryProps {
     onLoadItem: (item: TranscribedItem) => void;
@@ -39,15 +40,23 @@ export function History({ onLoadItem, refreshTrigger }: HistoryProps) {
                     className="group cursor-pointer rounded-lg border border-border bg-surface/30 p-3 hover:bg-surface-hover hover:border-primary/30 transition-all"
                 >
                     <div className="flex justify-between items-start mb-1">
-                        <span className="text-xs text-foreground-muted">{new Date(item.timestamp).toLocaleString(undefined, {
-                            year: 'numeric',
-                            month: 'numeric',
-                            day: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                            second: '2-digit',
-                            hour12: false
-                        })}</span>
+                        <div className="flex flex-col">
+                            <span className="text-xs text-foreground-muted">{new Date(item.timestamp).toLocaleString(undefined, {
+                                year: 'numeric',
+                                month: 'numeric',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                second: '2-digit',
+                                hour12: false
+                            })}</span>
+                            {item.mode && (
+                                <span className={cn(
+                                    "text-[10px] uppercase font-bold tracking-wider w-fit px-1 rounded mt-0.5",
+                                    item.mode === 'batch' ? "bg-accent/20 text-accent" : "bg-primary/20 text-primary"
+                                )}>{item.mode}</span>
+                            )}
+                        </div>
                         <div className="flex gap-2">
                             <span className="text-xs bg-surface-hover px-1.5 py-0.5 rounded text-primary">{item.provider1}</span>
                             <button

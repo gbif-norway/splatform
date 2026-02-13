@@ -143,6 +143,8 @@ function App() {
         temp1,
         provider2: `${provider2}/${m2}`,
         temp2,
+        mode: 'single',
+        detectedCodes: detectedBarcodes
       };
       StorageService.addToHistory(item);
       setHistoryTrigger(prev => prev + 1);
