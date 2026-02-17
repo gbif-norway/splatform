@@ -1,8 +1,9 @@
 import { Card } from './ui-misc';
 import { Button } from './ui-elements';
-import { Copy, Check, AlertTriangle, FileJson, Table as TableIcon, ArrowRight } from 'lucide-react';
+import { Copy, Check, AlertTriangle, FileJson, Table as TableIcon, ArrowRight, Wrench } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { cn } from '../utils/cn';
+import { parseMessyJson } from '../utils/jsonParsing';
 import type { GBIFOccurrence } from '../services/gbif';
 
 interface ResultTableProps {
@@ -18,22 +19,14 @@ export function ResultTable({ step1Result, step2Result, isLoading, currentStep, 
     const [copied, setCopied] = useState<string | null>(null);
     const [viewMode, setViewMode] = useState<'table' | 'json'>('table');
 
-    const { isValidJson, parsedJson } = useMemo(() => {
-        if (!step2Result) return { isValidJson: false, parsedJson: null };
-        try {
-            // Try to find JSON object if it's wrapped in markdown code blocks
-            let clean = step2Result.trim();
-            if (clean.startsWith('```json')) {
-                clean = clean.replace(/^```json/, '').replace(/```$/, '');
-            } else if (clean.startsWith('```')) {
-                clean = clean.replace(/^```/, '').replace(/```$/, '');
-            }
-
-            const obj = JSON.parse(clean);
-            return { isValidJson: true, parsedJson: obj };
-        } catch {
-            return { isValidJson: false, parsedJson: null };
-        }
+    const { isValidJson, isRepaired, parsedJson } = useMemo(() => {
+        if (!step2Result) return { isValidJson: false, isRepaired: false, parsedJson: null };
+        const result = parseMessyJson(step2Result);
+        return {
+            isValidJson: !!result.data,
+            isRepaired: result.isRepaired,
+            parsedJson: result.data
+        };
     }, [step2Result]);
 
     const copyToClipboard = (text: string, id: string) => {
@@ -98,10 +91,15 @@ export function ResultTable({ step1Result, step2Result, isLoading, currentStep, 
                     <h3 className="font-semibold text-accent flex items-center gap-2">
                         Step 2: Standardization
                         {step2Result && (
-                            isValidJson ?
-                                <span className="text-[10px] bg-success/10 text-success px-2 py-0.5 rounded-full border border-success/20 flex items-center gap-1">
-                                    <Check size={10} /> Valid JSON
-                                </span> :
+                            isValidJson ? (
+                                isRepaired ?
+                                    <span className="text-[10px] bg-warning/10 text-warning px-2 py-0.5 rounded-full border border-warning/20 flex items-center gap-1">
+                                        <Wrench size={10} /> Repaired JSON
+                                    </span> :
+                                    <span className="text-[10px] bg-success/10 text-success px-2 py-0.5 rounded-full border border-success/20 flex items-center gap-1">
+                                        <Check size={10} /> Valid JSON
+                                    </span>
+                            ) :
                                 <span className="text-[10px] bg-error/10 text-error px-2 py-0.5 rounded-full border border-error/20 flex items-center gap-1">
                                     <AlertTriangle size={10} /> Invalid JSON
                                 </span>
@@ -161,6 +159,15 @@ export function ResultTable({ step1Result, step2Result, isLoading, currentStep, 
                             isValidJson ? (
                                 viewMode === 'table' ? (
                                     <div className="overflow-x-auto">
+                                        {isRepaired && (
+                                            <div className="mb-4 bg-warning/10 border border-warning/20 p-3 rounded text-warning text-xs flex items-start gap-2">
+                                                <Wrench size={14} className="mt-0.5 shrink-0" />
+                                                <div>
+                                                    <p className="font-bold">JSON Repaired</p>
+                                                    <p>The output contained some errors but was successfully repaired.</p>
+                                                </div>
+                                            </div>
+                                        )}
                                         <table className="w-full text-sm text-left">
                                             <thead className="text-xs text-foreground-muted uppercase bg-surface-hover border-b border-border">
                                                 <tr>
