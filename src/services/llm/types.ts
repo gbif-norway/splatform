@@ -17,10 +17,19 @@ export interface LLMProvider {
 
     // Step 1: Transcription
     // Image is passed as a base64 string (including data URI prefix)
-    generateTranscription(apiKey: string, modelId: string, imageBase64: string, prompt: string, proxyUrl?: string, options?: LLMOptions): Promise<string>;
+    generateTranscription(apiKey: string, modelId: string, imageBase64: string, prompt: string, proxyUrl?: string, options?: LLMOptions): Promise<LLMResponse>;
 
     // Step 2: Standardization
-    standardizeText(apiKey: string, modelId: string, text: string, prompt: string, proxyUrl?: string, options?: LLMOptions): Promise<string>;
+    standardizeText(apiKey: string, modelId: string, text: string, prompt: string, proxyUrl?: string, options?: LLMOptions): Promise<LLMResponse>;
+}
+
+export interface LLMResponse {
+    text: string;
+    usage?: {
+        inputTokens: number;
+        outputTokens: number;
+        totalTokens: number;
+    };
 }
 
 export class LLMError extends Error {

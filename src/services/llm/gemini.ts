@@ -1,4 +1,4 @@
-import { type LLMProvider, type LLMModel, type LLMOptions, LLMError } from './types';
+import { type LLMProvider, type LLMModel, type LLMOptions, LLMError, type LLMResponse } from './types';
 
 export const GeminiProvider: LLMProvider = {
     id: 'gemini',
@@ -44,7 +44,7 @@ export const GeminiProvider: LLMProvider = {
         }
     },
 
-    generateTranscription: async (apiKey: string, modelId: string, imageBase64: string, prompt: string, proxyUrl?: string, options?: LLMOptions): Promise<string> => {
+    generateTranscription: async (apiKey: string, modelId: string, imageBase64: string, prompt: string, proxyUrl?: string, options?: LLMOptions): Promise<LLMResponse> => {
         // imageBase64 is data:image/jpeg;base64,.... we need to strip preamble
         const match = imageBase64.match(/^data:(.+);base64,(.+)$/);
         if (!match) throw new LLMError("Invalid image format", 'gemini');
@@ -79,14 +79,20 @@ export const GeminiProvider: LLMProvider = {
             }
 
             const resData = await response.json();
-            return resData.candidates?.[0]?.content?.parts?.[0]?.text || "";
+            const text = resData.candidates?.[0]?.content?.parts?.[0]?.text || "";
+            const usage = resData.usageMetadata ? {
+                inputTokens: resData.usageMetadata.promptTokenCount,
+                outputTokens: resData.usageMetadata.candidatesTokenCount,
+                totalTokens: resData.usageMetadata.totalTokenCount
+            } : undefined;
+            return { text, usage };
         } catch (e: unknown) {
             if (e instanceof LLMError) throw e;
             throw new LLMError(e instanceof Error ? e.message : 'Unknown error', 'gemini');
         }
     },
 
-    standardizeText: async (apiKey: string, modelId: string, text: string, prompt: string, proxyUrl?: string, options?: LLMOptions): Promise<string> => {
+    standardizeText: async (apiKey: string, modelId: string, text: string, prompt: string, proxyUrl?: string, options?: LLMOptions): Promise<LLMResponse> => {
         try {
             const baseUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${apiKey}`;
             const endpoint = proxyUrl ? `${proxyUrl}/${baseUrl}` : baseUrl;
@@ -116,7 +122,13 @@ export const GeminiProvider: LLMProvider = {
             }
 
             const resData = await response.json();
-            return resData.candidates?.[0]?.content?.parts?.[0]?.text || "";
+            const resultText = resData.candidates?.[0]?.content?.parts?.[0]?.text || "";
+            const usage = resData.usageMetadata ? {
+                inputTokens: resData.usageMetadata.promptTokenCount,
+                outputTokens: resData.usageMetadata.candidatesTokenCount,
+                totalTokens: resData.usageMetadata.totalTokenCount
+            } : undefined;
+            return { text: resultText, usage };
         } catch (e: unknown) {
             if (e instanceof LLMError) throw e;
             throw new LLMError(e instanceof Error ? e.message : 'Unknown error', 'gemini');

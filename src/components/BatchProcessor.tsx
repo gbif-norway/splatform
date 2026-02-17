@@ -25,6 +25,19 @@ interface BatchItem {
     detectedCodes?: string[];
     error?: string;
     gbifData?: any;
+    timings?: {
+        resolveDuration?: number;
+        scanDuration?: number;
+        transcribeDuration?: number;
+        standardizeDuration?: number;
+        totalDuration?: number;
+    };
+    usage?: {
+        transcription?: { input: number, output: number, model: string };
+        standardization?: { input: number, output: number, model: string };
+        totalInput: number;
+        totalOutput: number;
+    };
 }
 
 interface BatchProcessorProps {
@@ -133,6 +146,7 @@ export function BatchProcessor({
             // Process Image (standardize/resize/base64)
             const base64Image = await processImage(imageUrl, 0); // 0 rotation
 
+            const tScanStart = performance.now();
             updateItem(item.id, { imageUrl: imageUrl, gbifData, step: 'scanning' });
 
             // 1.5 Scan for Barcodes
@@ -170,9 +184,11 @@ export function BatchProcessor({
                 }
             }
 
+            const tScanEnd = performance.now();
             updateItem(item.id, { detectedCodes, step: 'transcribing' });
 
             // 2. Transcribe (step 1)
+            const tTranscribeStart = performance.now();
             const p1Key = settings[`${provider1}Key`];
             if (!p1Key) throw new Error(`Missing API Key for ${provider1}`);
 
@@ -188,9 +204,11 @@ export function BatchProcessor({
                 { temperature: temp1 }
             );
 
-            updateItem(item.id, { transcription: r1, step: 'standardizing' });
+            const tTranscribeEnd = performance.now();
+            updateItem(item.id, { transcription: r1.text, step: 'standardizing' });
 
             // 3. Standardize (step 2)
+            const tStandardizeStart = performance.now();
             const p2Key = settings[`${provider2}Key`] || p1Key;
             if (!p2Key && provider1 !== provider2) throw new Error(`Missing API Key for ${provider2}`);
 
@@ -200,21 +218,41 @@ export function BatchProcessor({
             const r2 = await provider2Inst.standardizeText(
                 p2Key,
                 m2,
-                r1,
+                r1.text,
                 prompt2,
                 settings.proxyUrl,
                 { temperature: temp2 }
             );
 
+            const tStandardizeEnd = performance.now();
+
             // Parse JSON immediately
-            const { data, status: parseStatus } = robustJSONParse(r2);
+            const { data, status: parseStatus } = robustJSONParse(r2.text);
+
+            // Calculate Stats
+            const timingStats = {
+                resolveDuration: 0, // Not strictly tracked yet but could be
+                scanDuration: tScanEnd - tScanStart,
+                transcribeDuration: tTranscribeEnd - tTranscribeStart,
+                standardizeDuration: tStandardizeEnd - tStandardizeStart,
+                totalDuration: tStandardizeEnd - tScanStart // Rough total
+            };
+
+            const usageStats = {
+                transcription: r1.usage ? { input: r1.usage.inputTokens, output: r1.usage.outputTokens, model: m1 } : undefined,
+                standardization: r2.usage ? { input: r2.usage.inputTokens, output: r2.usage.outputTokens, model: m2 } : undefined,
+                totalInput: (r1.usage?.inputTokens || 0) + (r2.usage?.inputTokens || 0),
+                totalOutput: (r1.usage?.outputTokens || 0) + (r2.usage?.outputTokens || 0)
+            };
 
             updateItem(item.id, {
-                standardization: r2,
+                standardization: r2.text,
                 parsedData: data,
                 parsingStatus: parseStatus,
                 status: 'completed',
-                step: 'done'
+                step: 'done',
+                timings: timingStats,
+                usage: usageStats
             });
 
             // Save to History
@@ -223,9 +261,9 @@ export function BatchProcessor({
                 timestamp: Date.now(),
                 filename: item.originalInput, // Use input as filename
                 prompt1,
-                result1: r1,
+                result1: r1.text,
                 prompt2,
-                result2: r2,
+                result2: r2.text,
                 provider1: `${provider1}/${m1}`,
                 temp1,
                 provider2: `${provider2}/${m2}`,
@@ -397,7 +435,17 @@ export function BatchProcessor({
                         </div>
                         <div className="p-2 bg-destructive/10 rounded-full text-destructive"><XCircle size={20} /></div>
                     </Card>
-                    <div className="flex items-end justify-end">
+                    <Card className="p-4 flex items-center justify-between border-l-4 border-l-info">
+                        <div>
+                            <div className="text-xs text-foreground-muted uppercase font-bold">Total Tokens</div>
+                            <div className="text-sm">
+                                In: {items.reduce((acc, i) => acc + (i.usage?.totalInput || 0), 0).toLocaleString()} <br />
+                                Out: {items.reduce((acc, i) => acc + (i.usage?.totalOutput || 0), 0).toLocaleString()}
+                            </div>
+                        </div>
+                        <div className="p-2 bg-info/10 rounded-full text-info"><Clock size={20} /></div>
+                    </Card>
+                    <div className="flex items-end justify-end col-span-4">
                         <Button variant="secondary" onClick={handleDownload} disabled={success === 0}>
                             <Download className="mr-2" size={16} /> Download CSV
                         </Button>
@@ -468,8 +516,18 @@ export function BatchProcessor({
                                             {item.error ? (
                                                 <span className="text-destructive text-xs">{item.error}</span>
                                             ) : (
-                                                <div className="text-xs text-foreground-muted truncate">
-                                                    {item.standardization || item.transcription || "-"}
+                                                <div className="flex flex-col gap-0.5">
+                                                    <div className="text-xs text-foreground-muted truncate">
+                                                        {item.standardization || item.transcription || "-"}
+                                                    </div>
+                                                    {item.usage && (
+                                                        <div className="text-[10px] text-foreground-muted font-mono flex gap-2">
+                                                            <span title="Total Duration">⏱ {(item.timings?.totalDuration || 0).toFixed(0)}ms</span>
+                                                            <span title="Tokens In/Out">🎟 {item.usage.totalInput}/{item.usage.totalOutput}</span>
+                                                            {item.usage.transcription && <span title={`Transcription: ${item.usage.transcription.model}`}>Step 1: {item.usage.transcription.model}</span>}
+                                                            {item.usage.standardization && <span title={`Standardization: ${item.usage.standardization.model}`}>Step 2: {item.usage.standardization.model}</span>}
+                                                        </div>
+                                                    )}
                                                 </div>
                                             )}
                                         </div>

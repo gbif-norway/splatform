@@ -1,4 +1,4 @@
-import { type LLMProvider, type LLMModel, type LLMOptions, LLMError } from './types';
+import { type LLMProvider, type LLMModel, type LLMOptions, LLMError, type LLMResponse } from './types';
 
 // xAI uses OpenAI compatible API
 export const XAIProvider: LLMProvider = {
@@ -42,7 +42,7 @@ export const XAIProvider: LLMProvider = {
         }
     },
 
-    generateTranscription: async (apiKey: string, modelId: string, imageBase64: string, prompt: string, proxyUrl?: string, options?: LLMOptions): Promise<string> => {
+    generateTranscription: async (apiKey: string, modelId: string, imageBase64: string, prompt: string, proxyUrl?: string, options?: LLMOptions): Promise<LLMResponse> => {
         try {
             const baseUrl = 'https://api.x.ai/v1/chat/completions';
             const endpoint = proxyUrl ? `${proxyUrl}/${baseUrl}` : baseUrl;
@@ -81,14 +81,19 @@ export const XAIProvider: LLMProvider = {
             }
 
             const data = await response.json();
-            return data.choices[0]?.message?.content || "";
+            const usage = data.usage ? {
+                inputTokens: data.usage.prompt_tokens,
+                outputTokens: data.usage.completion_tokens,
+                totalTokens: data.usage.total_tokens
+            } : undefined;
+            return { text: data.choices[0]?.message?.content || "", usage };
         } catch (e: unknown) {
             if (e instanceof LLMError) throw e;
             throw new LLMError(e instanceof Error ? e.message : 'Unknown error', 'xai');
         }
     },
 
-    standardizeText: async (apiKey: string, modelId: string, text: string, prompt: string, proxyUrl?: string, options?: LLMOptions): Promise<string> => {
+    standardizeText: async (apiKey: string, modelId: string, text: string, prompt: string, proxyUrl?: string, options?: LLMOptions): Promise<LLMResponse> => {
         try {
             const baseUrl = 'https://api.x.ai/v1/chat/completions';
             const endpoint = proxyUrl ? `${proxyUrl}/${baseUrl}` : baseUrl;
@@ -115,7 +120,12 @@ export const XAIProvider: LLMProvider = {
             }
 
             const data = await response.json();
-            return data.choices[0]?.message?.content || "";
+            const usage = data.usage ? {
+                inputTokens: data.usage.prompt_tokens,
+                outputTokens: data.usage.completion_tokens,
+                totalTokens: data.usage.total_tokens
+            } : undefined;
+            return { text: data.choices[0]?.message?.content || "", usage };
         } catch (e: unknown) {
             if (e instanceof LLMError) throw e;
             throw new LLMError(e instanceof Error ? e.message : 'Unknown error', 'xai');
