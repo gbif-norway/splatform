@@ -14,6 +14,8 @@ import { robustJSONParse, type JSONParseStatus } from '../utils/json';
 import { pLimit, retryWithBackoff } from '../utils/async';
 import { PricingService } from '../services/llm/pricing';
 
+import { PriceMappingModal } from './PriceMappingModal';
+
 interface BatchItem {
     id: string;
     originalInput: string;
@@ -77,7 +79,10 @@ export function BatchProcessor({
 
     const [isProcessing, setIsProcessing] = useState(false);
     const stopRef = useRef(false);
+
     const [concurrency, setConcurrency] = useState(3);
+    const [mappingModelId, setMappingModelId] = useState<string | null>(null);
+
 
     useEffect(() => {
         // Initialize pricing service
@@ -555,15 +560,18 @@ export function BatchProcessor({
                                                             <span title="Tokens In/Out">🎟 {item.usage.totalInput}/{item.usage.totalOutput}</span>
                                                             {item.usage.transcription && <span title={`Transcription: ${item.usage.transcription.model}`}>Step 1: {item.usage.transcription.model}</span>}
                                                             {item.usage.standardization && <span title={`Standardization: ${item.usage.standardization.model}`}>Step 2: {item.usage.standardization.model}</span>}
-                                                            {item.usage.estimatedCost !== null && item.usage.estimatedCost !== undefined && (
-                                                                <span title="Estimated Cost" className="text-success font-bold">
-                                                                    ${item.usage.estimatedCost.toFixed(5)}
-                                                                </span>
-                                                            )}
                                                             {item.usage.estimatedCost === null && (
-                                                                <span title="Cost Unknown" className="text-warning">
+                                                                <button
+                                                                    onClick={() => {
+                                                                        const m1 = item.usage?.transcription?.model;
+                                                                        if (m1 && PricingService.calculateCost(m1, 0, 0) === null) setMappingModelId(m1);
+                                                                        else setMappingModelId(item.usage?.standardization?.model || 'unknown');
+                                                                    }}
+                                                                    className="text-warning hover:underline cursor-pointer"
+                                                                    title="Click to map pricing"
+                                                                >
                                                                     Cost?
-                                                                </span>
+                                                                </button>
                                                             )}
                                                         </div>
                                                     )}
@@ -583,6 +591,40 @@ export function BatchProcessor({
                         </tbody>
                     </table>
                 </div>
+            )}
+
+            {mappingModelId && (
+                <PriceMappingModal
+                    unknownModelId={mappingModelId}
+                    onSave={() => {
+                        setMappingModelId(null);
+                        // Ideally we should re-calculate all costs for items with this model.
+                        // For now simplistic approach: user might need to re-run or we just update display next time.
+                        // Actually, let's trigger a re-calc for all completed items.
+                        setItems(prev => prev.map(i => {
+                            if (i.status === 'completed' && i.usage) {
+                                // Re-calculate cost
+                                const m1 = i.usage.transcription?.model;
+                                const m2 = i.usage.standardization?.model;
+
+                                let tCost = i.usage.transcription ? PricingService.calculateCost(m1!, i.usage.transcription.input, i.usage.transcription.output) : null;
+                                let sCost = i.usage.standardization ? PricingService.calculateCost(m2!, i.usage.standardization.input, i.usage.standardization.output) : null;
+
+                                const total = (tCost !== null && sCost !== null) ? tCost + sCost : null;
+
+                                return {
+                                    ...i,
+                                    usage: {
+                                        ...i.usage,
+                                        estimatedCost: total
+                                    }
+                                };
+                            }
+                            return i;
+                        }));
+                    }}
+                    onClose={() => setMappingModelId(null)}
+                />
             )}
         </div>
     );

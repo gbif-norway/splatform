@@ -3,7 +3,7 @@ import { Button } from './ui-elements';
 import { Copy, Check, AlertTriangle, FileJson, Table as TableIcon, ArrowRight, Wrench } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { cn } from '../utils/cn';
-import { parseMessyJson } from '../utils/jsonParsing';
+import { robustJSONParse } from '../utils/json';
 import type { GBIFOccurrence } from '../services/gbif';
 
 interface ResultTableProps {
@@ -21,10 +21,10 @@ export function ResultTable({ step1Result, step2Result, isLoading, currentStep, 
 
     const { isValidJson, isRepaired, parsedJson } = useMemo(() => {
         if (!step2Result) return { isValidJson: false, isRepaired: false, parsedJson: null };
-        const result = parseMessyJson(step2Result);
+        const result = robustJSONParse(step2Result);
         return {
-            isValidJson: !!result.data,
-            isRepaired: result.isRepaired,
+            isValidJson: result.status !== 'failed',
+            isRepaired: result.status !== 'clean' && result.status !== 'failed',
             parsedJson: result.data
         };
     }, [step2Result]);

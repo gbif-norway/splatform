@@ -19,11 +19,20 @@ const CACHE_duration_MS = 24 * 60 * 60 * 1000; // 24 hours
 export class PricingService {
     private static prices: Map<string, ModelPrice> = new Map();
     private static isInitialized = false;
+    private static aliases: Map<string, string> = new Map();
+    private static ALIAS_CACHE_KEY = 'llm_pricing_aliases';
 
     static async initialize(): Promise<void> {
         if (this.isInitialized) return;
 
         try {
+            // Load Aliases
+            const cachedAliases = localStorage.getItem(this.ALIAS_CACHE_KEY);
+            if (cachedAliases) {
+                const parsed = JSON.parse(cachedAliases);
+                Object.entries(parsed).forEach(([k, v]) => this.aliases.set(k, v as string));
+            }
+
             // Check cache
             const cached = localStorage.getItem(CACHE_KEY);
             if (cached) {
@@ -62,11 +71,18 @@ export class PricingService {
         this.prices.clear();
         data.prices.forEach(p => {
             this.prices.set(p.id, p);
-            // Also map by name if needed, or handle variations?
-            // For now, assume ID match. 
-            // Some providers might use different IDs than the pricing JSON.
-            // We might need a mapper later.
         });
+    }
+
+    static addAlias(fromId: string, toId: string) {
+        this.aliases.set(fromId, toId);
+        // Persist
+        const obj = Object.fromEntries(this.aliases);
+        localStorage.setItem(this.ALIAS_CACHE_KEY, JSON.stringify(obj));
+    }
+
+    static getAllModels(): ModelPrice[] {
+        return Array.from(this.prices.values()).sort((a, b) => a.id.localeCompare(b.id));
     }
 
     /**
@@ -78,49 +94,24 @@ export class PricingService {
             return null;
         }
 
-        // Try exact match
-        let price = this.prices.get(modelId);
+        // 0. Check User Alias
+        let targetId = this.aliases.get(modelId) || modelId;
 
-        // Try fuzzy match if exact fail (e.g. "gpt-4o-2024-05-13" vs "gpt-4o")
+        // 1. Try exact match
+        let price = this.prices.get(targetId);
+
+        // 2. Try hardcoded mapping if not found
         if (!price) {
-            // Common aliasing or fuzzy matching logic could go here if needed.
-            // For now, strict.
-            // Actually, let's try to be a bit smart about provider prefixes if they exist in our app but not in the JSON
-            // The JSON uses IDs like "gpt-4o", "claude-3-5-sonnet".
-            // Our app uses IDs like "gpt-4o", "claude-3-5-sonnet-20240620".
-
-            // Attempt to find a price where the known ID matches the start of our modelId
-            // or vice versa.
-            // But valid "offensive" approach is to require exact or known content.
-            // Let's rely on exact match first.
+            if (targetId === 'claude-3-5-sonnet-20240620') price = this.prices.get('claude-3.5-sonnet');
+            else if (targetId === 'claude-3-opus-20240229') price = this.prices.get('claude-3-opus');
+            else if (targetId === 'claude-3-sonnet-20240229') price = this.prices.get('claude-3-sonnet');
+            else if (targetId === 'claude-3-haiku-20240307') price = this.prices.get('claude-3-haiku');
+            else if (targetId === 'gpt-4-turbo-preview') price = this.prices.get('gpt-4-turbo');
+            else if (targetId === 'grok-vision-beta') price = this.prices.get('grok-2-vision-1212');
         }
 
         if (!price) {
-            // Check for specific known mappings if ids differ significantly
-            // OpenAI: our app uses 'gpt-4o', json has 'gpt-4o'
-            // Anthropic: our app 'claude-3-5-sonnet-20240620', json 'claude-3.5-sonnet' (note dot vs dash and version)
-
-            // Mapping for Anthropic
-            if (modelId === 'claude-3-5-sonnet-20240620') price = this.prices.get('claude-3.5-sonnet');
-            else if (modelId === 'claude-3-opus-20240229') price = this.prices.get('claude-3-opus');
-            else if (modelId === 'claude-3-sonnet-20240229') price = this.prices.get('claude-3-sonnet');
-            else if (modelId === 'claude-3-haiku-20240307') price = this.prices.get('claude-3-haiku');
-
-            // OpenAI
-            else if (modelId === 'gpt-4-turbo-preview') price = this.prices.get('gpt-4-turbo');
-
-            // Gemini
-            // App: 'gemini-1.5-flash' -> JSON: 'gemini-1.5-flash' (match)
-            // App: 'gemini-1.5-pro' -> JSON: 'gemini-1.5-pro' (match)
-
-            // xAI
-            // App: 'grok-vision-beta' -> JSON might not have it or have different ID
-            // json has: grok-2-vision-1212 etc.
-            else if (modelId === 'grok-vision-beta') price = this.prices.get('grok-2-vision-1212'); // Best guess mapping
-        }
-
-        if (!price) {
-            console.error(`Pricing not found for model: ${modelId}`);
+            console.error(`Pricing not found for model: ${modelId} (target: ${targetId})`);
             return null;
         }
 
