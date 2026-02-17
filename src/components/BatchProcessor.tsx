@@ -2,7 +2,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Button } from './ui-elements';
 import { Card } from './ui-misc';
-import { Trash2, Play, CheckCircle, XCircle, Download, RefreshCw, Clock, DollarSign, Loader } from 'lucide-react';
+import { Trash2, Play, CheckCircle, XCircle, Download, RefreshCw, Clock, DollarSign, Loader, Activity } from 'lucide-react';
 import { GBIFService } from '../services/gbif';
 import { LLMService } from '../services/llm';
 import { BarcodeService } from '../services/barcode';
@@ -438,7 +438,7 @@ export function BatchProcessor({
             </Card>
 
             {items.length > 0 && (
-                <div className="grid grid-cols-4 gap-4">
+                <div className="grid grid-cols-3 gap-4">
                     <Card className="p-4 flex items-center justify-between border-l-4 border-l-primary">
                         <div>
                             <div className="text-xs text-foreground-muted uppercase font-bold">Total</div>
@@ -478,6 +478,23 @@ export function BatchProcessor({
                             </div>
                         </div>
                         <div className="p-2 bg-success/10 rounded-full text-success"><DollarSign size={20} /></div>
+                    </Card>
+                    <Card className="p-4 flex items-center justify-between border-l-4 border-l-warning">
+                        <div>
+                            <div className="text-xs text-foreground-muted uppercase font-bold">Avg Performance</div>
+                            <div className="text-sm">
+                                {success > 0 ? (
+                                    <>
+                                        Time: {(items.filter(i => i.status === 'completed').reduce((acc, i) => acc + (i.timings?.totalDuration || 0), 0) / success).toFixed(0)} ms<br />
+                                        Cost: ${(items.reduce((acc, i) => acc + (i.usage?.estimatedCost || 0), 0) / success).toFixed(4)}<br />
+                                        Per 1k: ${((items.reduce((acc, i) => acc + (i.usage?.estimatedCost || 0), 0) / success) * 1000).toFixed(2)}
+                                    </>
+                                ) : (
+                                    <span className="text-foreground-muted italic">Pending...</span>
+                                )}
+                            </div>
+                        </div>
+                        <div className="p-2 bg-warning/10 rounded-full text-warning"><Activity size={20} /></div>
                     </Card>
                     <div className="flex items-end justify-end col-span-3">
                         <Button variant="secondary" onClick={handleDownload} disabled={success === 0}>
