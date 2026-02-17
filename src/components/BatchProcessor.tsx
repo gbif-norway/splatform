@@ -10,6 +10,7 @@ import { cn } from '../utils/cn';
 
 import { StorageService } from '../services/storage';
 import { robustJSONParse, type JSONParseStatus } from '../utils/json';
+import { pLimit, retryWithBackoff } from '../utils/async';
 
 interface BatchItem {
     id: string;
@@ -60,6 +61,7 @@ export function BatchProcessor({
 
     const [isProcessing, setIsProcessing] = useState(false);
     const stopRef = useRef(false);
+    const [concurrency, setConcurrency] = useState(3);
 
     // Stats
     const total = items.length;
@@ -255,10 +257,15 @@ export function BatchProcessor({
             setItems(prev => prev.map(item => item.id === id ? { ...item, ...updates } : item));
         };
 
-        for (const item of queue) {
-            if (stopRef.current) break;
-            await processItem(item, updateItem);
-        }
+        const limit = pLimit(concurrency);
+        const promises = queue.map(item => limit(() =>
+            retryWithBackoff(async () => {
+                if (stopRef.current) return;
+                await processItem(item, updateItem);
+            })
+        ));
+
+        await Promise.all(promises);
 
         setIsProcessing(false);
     };
@@ -336,20 +343,34 @@ export function BatchProcessor({
                     onChange={e => setInput(e.target.value)}
                     disabled={isProcessing}
                 />
-                <div className="flex justify-end gap-2">
-                    <Button variant="ghost" onClick={handleClearSession} disabled={isProcessing || items.length === 0} title="Clear Session" className="mr-auto text-destructive hover:text-destructive hover:bg-destructive/10">
-                        <Trash2 size={16} className="mr-2" /> Clear Session
-                    </Button>
-                    <Button variant="secondary" onClick={handleParse} disabled={isProcessing || !input.trim()}>
-                        Reset / Parse
-                    </Button>
-                    <Button onClick={handleRunBatch} disabled={isProcessing || (!items.length && !input.trim())}>
-                        {isProcessing ? <Loader className="animate-spin mr-2" size={16} /> : <Play className="mr-2" size={16} />}
-                        {isProcessing ? 'Processing...' : 'Run Batch'}
-                    </Button>
-                    {isProcessing && (
-                        <Button variant="danger" onClick={() => (stopRef.current = true)}>Stop</Button>
-                    )}
+                <div className="flex justify-between items-center mt-2">
+                    <div className="flex items-center gap-2 text-sm text-foreground-muted">
+                        <span>Concurrency: {concurrency}</span>
+                        <input
+                            type="range"
+                            min="1"
+                            max="10"
+                            value={concurrency}
+                            onChange={(e) => setConcurrency(parseInt(e.target.value))}
+                            className="w-24 h-2 bg-border rounded-lg appearance-none cursor-pointer"
+                            disabled={isProcessing}
+                        />
+                    </div>
+                    <div className="flex justify-end gap-2">
+                        <Button variant="ghost" onClick={handleClearSession} disabled={isProcessing || items.length === 0} title="Clear Session" className="mr-auto text-destructive hover:text-destructive hover:bg-destructive/10">
+                            <Trash2 size={16} className="mr-2" /> Clear Session
+                        </Button>
+                        <Button variant="secondary" onClick={handleParse} disabled={isProcessing || !input.trim()}>
+                            Reset / Parse
+                        </Button>
+                        <Button onClick={handleRunBatch} disabled={isProcessing || (!items.length && !input.trim())}>
+                            {isProcessing ? <Loader className="animate-spin mr-2" size={16} /> : <Play className="mr-2" size={16} />}
+                            {isProcessing ? 'Processing...' : 'Run Batch'}
+                        </Button>
+                        {isProcessing && (
+                            <Button variant="danger" onClick={() => (stopRef.current = true)}>Stop</Button>
+                        )}
+                    </div>
                 </div>
             </Card>
 
