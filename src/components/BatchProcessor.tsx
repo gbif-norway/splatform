@@ -80,14 +80,18 @@ export function BatchProcessor({
         return () => clearTimeout(timer);
     }, [items]);
 
-    const handleParse = () => {
-        const lines = input.split('\n').filter(l => l.trim().length > 0);
-        const newItems: BatchItem[] = lines.map(line => ({
+    const parseInputToItems = (text: string): BatchItem[] => {
+        const lines = text.split('\n').filter(l => l.trim().length > 0);
+        return lines.map(line => ({
             id: crypto.randomUUID(),
             originalInput: line.trim(),
             status: 'pending',
             step: 'resolving'
         }));
+    };
+
+    const handleParse = () => {
+        const newItems = parseInputToItems(input);
         setItems(newItems);
     };
 
@@ -235,11 +239,17 @@ export function BatchProcessor({
     };
 
     const handleRunBatch = async () => {
-        if (items.length === 0) handleParse();
+        let batchItems = items;
+        if (batchItems.length === 0) {
+            batchItems = parseInputToItems(input);
+            if (batchItems.length === 0) return;
+            setItems(batchItems);
+        }
+
         setIsProcessing(true);
         stopRef.current = false;
 
-        const queue = items.filter(i => i.status === 'pending' || i.status === 'failed');
+        const queue = batchItems.filter(i => i.status === 'pending' || i.status === 'failed');
 
         const updateItem = (id: string, updates: Partial<BatchItem>) => {
             setItems(prev => prev.map(item => item.id === id ? { ...item, ...updates } : item));
