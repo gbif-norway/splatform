@@ -2,7 +2,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Button } from './ui-elements';
 import { Card } from './ui-misc';
-import { Trash2, Play, CheckCircle, XCircle, Download, RefreshCw, Clock, DollarSign, Loader } from 'lucide-react';
+import { Trash2, Play, CheckCircle, XCircle, Download, RefreshCw, Clock, DollarSign, Loader, Activity } from 'lucide-react';
 import { GBIFService } from '../services/gbif';
 import { LLMService } from '../services/llm';
 import { BarcodeService } from '../services/barcode';
@@ -13,6 +13,8 @@ import { StorageService } from '../services/storage';
 import { robustJSONParse, type JSONParseStatus } from '../utils/json';
 import { pLimit, retryWithBackoff } from '../utils/async';
 import { PricingService } from '../services/llm/pricing';
+
+import { PriceMappingModal } from './PriceMappingModal';
 
 interface BatchItem {
     id: string;
@@ -77,7 +79,10 @@ export function BatchProcessor({
 
     const [isProcessing, setIsProcessing] = useState(false);
     const stopRef = useRef(false);
+
     const [concurrency, setConcurrency] = useState(3);
+    const [mappingModelId, setMappingModelId] = useState<string | null>(null);
+
 
     useEffect(() => {
         // Initialize pricing service
@@ -433,7 +438,7 @@ export function BatchProcessor({
             </Card>
 
             {items.length > 0 && (
-                <div className="grid grid-cols-4 gap-4">
+                <div className="grid grid-cols-3 gap-4">
                     <Card className="p-4 flex items-center justify-between border-l-4 border-l-primary">
                         <div>
                             <div className="text-xs text-foreground-muted uppercase font-bold">Total</div>
@@ -473,6 +478,23 @@ export function BatchProcessor({
                             </div>
                         </div>
                         <div className="p-2 bg-success/10 rounded-full text-success"><DollarSign size={20} /></div>
+                    </Card>
+                    <Card className="p-4 flex items-center justify-between border-l-4 border-l-warning">
+                        <div>
+                            <div className="text-xs text-foreground-muted uppercase font-bold">Avg Performance</div>
+                            <div className="text-sm">
+                                {success > 0 ? (
+                                    <>
+                                        Time: {(items.filter(i => i.status === 'completed').reduce((acc, i) => acc + (i.timings?.totalDuration || 0), 0) / success).toFixed(0)} ms<br />
+                                        Cost: ${(items.reduce((acc, i) => acc + (i.usage?.estimatedCost || 0), 0) / success).toFixed(4)}<br />
+                                        Per 1k: ${((items.reduce((acc, i) => acc + (i.usage?.estimatedCost || 0), 0) / success) * 1000).toFixed(2)}
+                                    </>
+                                ) : (
+                                    <span className="text-foreground-muted italic">Pending...</span>
+                                )}
+                            </div>
+                        </div>
+                        <div className="p-2 bg-warning/10 rounded-full text-warning"><Activity size={20} /></div>
                     </Card>
                     <div className="flex items-end justify-end col-span-3">
                         <Button variant="secondary" onClick={handleDownload} disabled={success === 0}>
@@ -555,15 +577,18 @@ export function BatchProcessor({
                                                             <span title="Tokens In/Out">🎟 {item.usage.totalInput}/{item.usage.totalOutput}</span>
                                                             {item.usage.transcription && <span title={`Transcription: ${item.usage.transcription.model}`}>Step 1: {item.usage.transcription.model}</span>}
                                                             {item.usage.standardization && <span title={`Standardization: ${item.usage.standardization.model}`}>Step 2: {item.usage.standardization.model}</span>}
-                                                            {item.usage.estimatedCost !== null && item.usage.estimatedCost !== undefined && (
-                                                                <span title="Estimated Cost" className="text-success font-bold">
-                                                                    ${item.usage.estimatedCost.toFixed(5)}
-                                                                </span>
-                                                            )}
                                                             {item.usage.estimatedCost === null && (
-                                                                <span title="Cost Unknown" className="text-warning">
+                                                                <button
+                                                                    onClick={() => {
+                                                                        const m1 = item.usage?.transcription?.model;
+                                                                        if (m1 && PricingService.calculateCost(m1, 0, 0) === null) setMappingModelId(m1);
+                                                                        else setMappingModelId(item.usage?.standardization?.model || 'unknown');
+                                                                    }}
+                                                                    className="text-warning hover:underline cursor-pointer"
+                                                                    title="Click to map pricing"
+                                                                >
                                                                     Cost?
-                                                                </span>
+                                                                </button>
                                                             )}
                                                         </div>
                                                     )}
@@ -583,6 +608,40 @@ export function BatchProcessor({
                         </tbody>
                     </table>
                 </div>
+            )}
+
+            {mappingModelId && (
+                <PriceMappingModal
+                    unknownModelId={mappingModelId}
+                    onSave={() => {
+                        setMappingModelId(null);
+                        // Ideally we should re-calculate all costs for items with this model.
+                        // For now simplistic approach: user might need to re-run or we just update display next time.
+                        // Actually, let's trigger a re-calc for all completed items.
+                        setItems(prev => prev.map(i => {
+                            if (i.status === 'completed' && i.usage) {
+                                // Re-calculate cost
+                                const m1 = i.usage.transcription?.model;
+                                const m2 = i.usage.standardization?.model;
+
+                                let tCost = i.usage.transcription ? PricingService.calculateCost(m1!, i.usage.transcription.input, i.usage.transcription.output) : null;
+                                let sCost = i.usage.standardization ? PricingService.calculateCost(m2!, i.usage.standardization.input, i.usage.standardization.output) : null;
+
+                                const total = (tCost !== null && sCost !== null) ? tCost + sCost : null;
+
+                                return {
+                                    ...i,
+                                    usage: {
+                                        ...i.usage,
+                                        estimatedCost: total
+                                    }
+                                };
+                            }
+                            return i;
+                        }));
+                    }}
+                    onClose={() => setMappingModelId(null)}
+                />
             )}
         </div>
     );
