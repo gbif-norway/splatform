@@ -1,7 +1,7 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Button } from './ui-elements';
 import { Card } from './ui-misc';
-import { Play, Download, CheckCircle, Clock, Loader, RefreshCw, XCircle } from 'lucide-react';
+import { Play, Download, CheckCircle, Clock, Loader, RefreshCw, XCircle, Trash2 } from 'lucide-react';
 import { GBIFService } from '../services/gbif';
 import { LLMService } from '../services/llm';
 import { BarcodeService } from '../services/barcode';
@@ -44,7 +44,20 @@ export function BatchProcessor({
     prompt2, provider2, model2, temp2
 }: BatchProcessorProps) {
     const [input, setInput] = useState('');
-    const [items, setItems] = useState<BatchItem[]>([]);
+
+    // Initialize items from storage directly
+    const [items, setItems] = useState<BatchItem[]>(() => {
+        const saved = StorageService.getBatchSession();
+        if (saved && saved.length > 0) {
+            return saved.map((i: BatchItem) => ({
+                ...i,
+                status: i.status === 'processing' ? 'pending' : i.status,
+                step: i.status === 'processing' ? 'resolving' : i.step
+            }));
+        }
+        return [];
+    });
+
     const [isProcessing, setIsProcessing] = useState(false);
     const stopRef = useRef(false);
 
@@ -52,6 +65,20 @@ export function BatchProcessor({
     const total = items.length;
     const success = items.filter(i => i.status === 'completed').length;
     const failed = items.filter(i => i.status === 'failed').length;
+
+    // Persist changes
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            if (items.length > 0) {
+                StorageService.saveBatchSession(items);
+            } else {
+                // If empty, we might want to clear, but handleClearSession does explicit clear.
+                // If user deletes all text input, items becomes empty on parse?
+                // Actually items only changes via handleParse or updateItem.
+            }
+        }, 500);
+        return () => clearTimeout(timer);
+    }, [items]);
 
     const handleParse = () => {
         const lines = input.split('\n').filter(l => l.trim().length > 0);
@@ -63,6 +90,15 @@ export function BatchProcessor({
         }));
         setItems(newItems);
     };
+
+    const handleClearSession = () => {
+        if (confirm("Clear the current batch session? This will remove all items from the list.")) {
+            setItems([]);
+            setInput('');
+            StorageService.clearBatchSession();
+        }
+    };
+
 
     const processItem = async (item: BatchItem, updateItem: (id: string, updates: Partial<BatchItem>) => void) => {
         if (stopRef.current) return;
@@ -291,6 +327,9 @@ export function BatchProcessor({
                     disabled={isProcessing}
                 />
                 <div className="flex justify-end gap-2">
+                    <Button variant="ghost" onClick={handleClearSession} disabled={isProcessing || items.length === 0} title="Clear Session" className="mr-auto text-destructive hover:text-destructive hover:bg-destructive/10">
+                        <Trash2 size={16} className="mr-2" /> Clear Session
+                    </Button>
                     <Button variant="secondary" onClick={handleParse} disabled={isProcessing || !input.trim()}>
                         Reset / Parse
                     </Button>

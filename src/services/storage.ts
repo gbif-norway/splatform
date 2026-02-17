@@ -95,5 +95,20 @@ export const StorageService = {
 
     saveRecentState: (state: any) => {
         localStorage.setItem('slpat_session', JSON.stringify(state));
+    },
+
+    getBatchSession: (): any[] | null => {
+        try {
+            const data = localStorage.getItem('slpat_batch_session');
+            return data ? JSON.parse(data) : null;
+        } catch { return null; }
+    },
+
+    saveBatchSession: (items: any[]) => {
+        localStorage.setItem('slpat_batch_session', JSON.stringify(items));
+    },
+
+    clearBatchSession: () => {
+        localStorage.removeItem('slpat_batch_session');
     }
 };
