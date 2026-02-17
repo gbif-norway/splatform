@@ -10,7 +10,7 @@ export function Settings({ onClose }: { onClose?: () => void }) {
     const [keys, setKeys] = useState(settings);
     const [showKeys, setShowKeys] = useState<Record<string, boolean>>({});
 
-    const handleChange = (key: keyof typeof keys, value: string) => {
+    const handleChange = (key: keyof typeof keys, value: any) => {
         setKeys(prev => ({ ...prev, [key]: value }));
     };
 
@@ -80,7 +80,7 @@ export function Settings({ onClose }: { onClose?: () => void }) {
                                 <Input
                                     id={field.id}
                                     type={showKeys[field.id] ? "text" : "password"}
-                                    value={keys[field.id as keyof typeof keys]}
+                                    value={keys[field.id as keyof typeof keys] as string}
                                     onChange={(e) => handleChange(field.id as keyof typeof keys, e.target.value)}
                                     placeholder={field.placeholder}
                                     className="pr-10"
@@ -126,6 +126,31 @@ export function Settings({ onClose }: { onClose?: () => void }) {
                     onChange={(e) => handleChange('proxyUrl', e.target.value)}
                     placeholder="https://your-proxy.com"
                 />
+            </div>
+
+            {/* General Settings */}
+            <div className="space-y-4 pt-4 border-t border-border">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <Label htmlFor="barcodeScan" className="mb-0 text-foreground">Enable Barcode Scanning</Label>
+                        <p className="text-xs text-foreground-muted">Automatically detect barcodes and QR codes in images.</p>
+                    </div>
+                    <div className="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
+                        <input
+                            type="checkbox"
+                            name="barcodeScan"
+                            id="barcodeScan"
+                            className="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer checked:right-0 right-6 checked:border-green-400"
+                            style={{ right: keys.enableBarcodeScanning ? '0' : 'auto', left: keys.enableBarcodeScanning ? 'auto' : '0' }}
+                            checked={keys.enableBarcodeScanning}
+                            onChange={(e) => handleChange('enableBarcodeScanning', e.target.checked)}
+                        />
+                        <label
+                            htmlFor="barcodeScan"
+                            className={`toggle-label block overflow-hidden h-6 rounded-full cursor-pointer ${keys.enableBarcodeScanning ? 'bg-green-400' : 'bg-gray-300'}`}
+                        ></label>
+                    </div>
+                </div>
             </div>
 
             <div className="pt-4 flex justify-end">

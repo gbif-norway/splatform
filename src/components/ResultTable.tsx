@@ -12,9 +12,10 @@ interface ResultTableProps {
     isLoading: boolean;
     currentStep: number;
     gbifData?: GBIFOccurrence;
+    detectedBarcodes?: string[];
 }
 
-export function ResultTable({ step1Result, step2Result, isLoading, currentStep, gbifData }: ResultTableProps) {
+export function ResultTable({ step1Result, step2Result, isLoading, currentStep, gbifData, detectedBarcodes }: ResultTableProps) {
     const [copied, setCopied] = useState<string | null>(null);
     const [viewMode, setViewMode] = useState<'table' | 'json'>('table');
 
@@ -38,6 +39,28 @@ export function ResultTable({ step1Result, step2Result, isLoading, currentStep, 
 
     return (
         <div className="flex flex-col gap-6 w-full">
+            {/* Detected Barcodes */}
+            {detectedBarcodes && detectedBarcodes.length > 0 && (
+                <Card className="p-4 flex flex-col bg-accent/5 border-accent/20">
+                    <div className="flex items-center gap-2 mb-2">
+                        <div className="bg-accent/20 p-1 rounded text-accent">
+                            <TableIcon size={14} />
+                        </div>
+                        <h3 className="font-semibold text-accent text-sm uppercase tracking-wide">Detected Barcodes</h3>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                        {detectedBarcodes.map((code, idx) => (
+                            <div key={idx} className="bg-background border border-accent/30 rounded px-3 py-1.5 font-mono text-sm shadow-sm flex items-center gap-2">
+                                {code}
+                                <Button variant="ghost" size="sm" onClick={() => copyToClipboard(code, `code-${idx}`)} className="h-6 w-6 p-0 opacity-50 hover:opacity-100">
+                                    {copied === `code-${idx}` ? <Check size={12} className="text-success" /> : <Copy size={12} />}
+                                </Button>
+                            </div>
+                        ))}
+                    </div>
+                </Card>
+            )}
+
             {/* Step 1 Result */}
             <Card className="p-4 flex flex-col">
                 <div className="flex items-center justify-between mb-4 pb-2 border-b border-border">

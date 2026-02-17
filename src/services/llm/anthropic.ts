@@ -1,4 +1,4 @@
-import { type LLMProvider, type LLMModel, type LLMOptions, LLMError } from './types';
+import { type LLMProvider, type LLMModel, type LLMOptions, LLMError, type LLMResponse } from './types';
 
 export const AnthropicProvider: LLMProvider = {
     id: 'anthropic',
@@ -54,7 +54,7 @@ export const AnthropicProvider: LLMProvider = {
         }
     },
 
-    generateTranscription: async (apiKey: string, modelId: string, imageBase64: string, prompt: string, proxyUrl?: string, options?: LLMOptions): Promise<string> => {
+    generateTranscription: async (apiKey: string, modelId: string, imageBase64: string, prompt: string, proxyUrl?: string, options?: LLMOptions): Promise<LLMResponse> => {
         const match = imageBase64.match(/^data:(.+);base64,(.+)$/);
         if (!match) throw new LLMError("Invalid image format", 'anthropic');
         const mimeType = match[1];
@@ -101,14 +101,19 @@ export const AnthropicProvider: LLMProvider = {
             }
 
             const resData = await response.json();
-            return resData.content?.[0]?.text || "";
+            const usage = resData.usage ? {
+                inputTokens: resData.usage.input_tokens,
+                outputTokens: resData.usage.output_tokens,
+                totalTokens: resData.usage.input_tokens + resData.usage.output_tokens
+            } : undefined;
+            return { text: resData.content?.[0]?.text || "", usage };
         } catch (e: unknown) {
             if (e instanceof LLMError) throw e;
             throw new LLMError(e instanceof Error ? e.message : 'Unknown error', 'anthropic');
         }
     },
 
-    standardizeText: async (apiKey: string, modelId: string, text: string, prompt: string, proxyUrl?: string, options?: LLMOptions): Promise<string> => {
+    standardizeText: async (apiKey: string, modelId: string, text: string, prompt: string, proxyUrl?: string, options?: LLMOptions): Promise<LLMResponse> => {
         try {
             const baseUrl = 'https://api.anthropic.com/v1/messages';
             const endpoint = proxyUrl ? `${proxyUrl}/${baseUrl}` : baseUrl;
@@ -137,7 +142,12 @@ export const AnthropicProvider: LLMProvider = {
             }
 
             const resData = await response.json();
-            return resData.content?.[0]?.text || "";
+            const usage = resData.usage ? {
+                inputTokens: resData.usage.input_tokens,
+                outputTokens: resData.usage.output_tokens,
+                totalTokens: resData.usage.input_tokens + resData.usage.output_tokens
+            } : undefined;
+            return { text: resData.content?.[0]?.text || "", usage };
         } catch (e: unknown) {
             if (e instanceof LLMError) throw e;
             throw new LLMError(e instanceof Error ? e.message : 'Unknown error', 'anthropic');

@@ -1,4 +1,4 @@
-import { type LLMProvider, type LLMModel, type LLMOptions, LLMError } from './types';
+import { type LLMProvider, type LLMModel, type LLMOptions, LLMError, type LLMResponse } from './types';
 
 const getEndpointInfo = (modelId: string, proxyUrl?: string) => {
     const baseUrl = 'https://api.openai.com/v1';
@@ -60,7 +60,7 @@ export const OpenAIProvider: LLMProvider = {
         }
     },
 
-    generateTranscription: async (apiKey: string, modelId: string, imageBase64: string, prompt: string, proxyUrl?: string, options?: LLMOptions): Promise<string> => {
+    generateTranscription: async (apiKey: string, modelId: string, imageBase64: string, prompt: string, proxyUrl?: string, options?: LLMOptions): Promise<LLMResponse> => {
         try {
             const { endpoint, mode } = getEndpointInfo(modelId, proxyUrl);
 
@@ -139,6 +139,12 @@ export const OpenAIProvider: LLMProvider = {
             }
 
             const data = await response.json();
+            const usage = data.usage ? {
+                inputTokens: data.usage.prompt_tokens,
+                outputTokens: data.usage.completion_tokens,
+                totalTokens: data.usage.total_tokens
+            } : undefined;
+
             if (mode === 'responses') {
                 // OpenAI Responses API structure can vary.
                 // It might be output[0].content or output[0].message.content or output[0].text depending on configuration.
@@ -146,31 +152,31 @@ export const OpenAIProvider: LLMProvider = {
                 // Filter out reasoning chunks which might come first in gpt-5/reasoning models
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 const output = (data.output as any[])?.find((o: any) => o.type !== 'reasoning') || data.output?.[0];
-                if (!output) return "";
+                if (!output) return { text: "", usage };
 
                 // Case 1: output itself has content array (User's case)
                 if (output.content && Array.isArray(output.content)) {
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    return output.content.map((c: any) => c.text || '').join('');
+                    return { text: output.content.map((c: any) => c.text || '').join(''), usage };
                 }
 
                 // Case 2: output has message object
                 if (output.message?.content) {
-                    if (typeof output.message.content === 'string') return output.message.content;
+                    if (typeof output.message.content === 'string') return { text: output.message.content, usage };
                     if (Array.isArray(output.message.content)) {
                         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                        return output.message.content.map((c: any) => c.text || '').join('');
+                        return { text: output.message.content.map((c: any) => c.text || '').join(''), usage };
                     }
                 }
 
                 // Case 3: simple text field
-                if (typeof output.text === 'string') return output.text;
+                if (typeof output.text === 'string') return { text: output.text, usage };
 
-                return JSON.stringify(output); // Fallback for debugging
+                return { text: JSON.stringify(output), usage }; // Fallback for debugging
             } else if (mode === 'completion') {
-                return data.choices[0]?.text || "";
+                return { text: data.choices[0]?.text || "", usage };
             }
-            return data.choices[0]?.message?.content || "";
+            return { text: data.choices[0]?.message?.content || "", usage };
         } catch (e: unknown) {
             console.error('[OpenAI] Transcription Error:', e);
             if (e instanceof LLMError) throw e;
@@ -178,7 +184,7 @@ export const OpenAIProvider: LLMProvider = {
         }
     },
 
-    standardizeText: async (apiKey: string, modelId: string, text: string, prompt: string, proxyUrl?: string, options?: LLMOptions): Promise<string> => {
+    standardizeText: async (apiKey: string, modelId: string, text: string, prompt: string, proxyUrl?: string, options?: LLMOptions): Promise<LLMResponse> => {
         try {
             const { endpoint, mode } = getEndpointInfo(modelId, proxyUrl);
 
@@ -242,6 +248,12 @@ export const OpenAIProvider: LLMProvider = {
             }
 
             const data = await response.json();
+            const usage = data.usage ? {
+                inputTokens: data.usage.prompt_tokens,
+                outputTokens: data.usage.completion_tokens,
+                totalTokens: data.usage.total_tokens
+            } : undefined;
+
             if (mode === 'responses') {
                 // OpenAI Responses API structure can vary.
                 // It might be output[0].content or output[0].message.content or output[0].text depending on configuration.
@@ -249,31 +261,31 @@ export const OpenAIProvider: LLMProvider = {
                 // Filter out reasoning chunks which might come first in gpt-5/reasoning models
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 const output = (data.output as any[])?.find((o: any) => o.type !== 'reasoning') || data.output?.[0];
-                if (!output) return "";
+                if (!output) return { text: "", usage };
 
                 // Case 1: output itself has content array (User's case)
                 if (output.content && Array.isArray(output.content)) {
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    return output.content.map((c: any) => c.text || '').join('');
+                    return { text: output.content.map((c: any) => c.text || '').join(''), usage };
                 }
 
                 // Case 2: output has message object
                 if (output.message?.content) {
-                    if (typeof output.message.content === 'string') return output.message.content;
+                    if (typeof output.message.content === 'string') return { text: output.message.content, usage };
                     if (Array.isArray(output.message.content)) {
                         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                        return output.message.content.map((c: any) => c.text || '').join('');
+                        return { text: output.message.content.map((c: any) => c.text || '').join(''), usage };
                     }
                 }
 
                 // Case 3: simple text field
-                if (typeof output.text === 'string') return output.text;
+                if (typeof output.text === 'string') return { text: output.text, usage };
 
-                return JSON.stringify(output); // Fallback for debugging
+                return { text: JSON.stringify(output), usage }; // Fallback for debugging
             } else if (mode === 'completion') {
-                return data.choices[0]?.text || "";
+                return { text: data.choices[0]?.text || "", usage };
             }
-            return data.choices[0]?.message?.content || "";
+            return { text: data.choices[0]?.message?.content || "", usage };
         } catch (e: unknown) {
             if (e instanceof LLMError) throw e;
             throw new LLMError(e instanceof Error ? e.message : 'Unknown error', 'openai');

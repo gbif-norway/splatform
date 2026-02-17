@@ -16,6 +16,8 @@ export interface TranscribedItem {
     temp1: number;
     provider2: string;
     temp2: number;
+    mode?: 'single' | 'batch';
+    detectedCodes?: string[];
 }
 
 export interface AppSettings {
@@ -24,6 +26,7 @@ export interface AppSettings {
     anthropicKey: string;
     xaiKey: string;
     proxyUrl: string;
+    enableBarcodeScanning: boolean;
 }
 
 const SETTINGS_KEY = 'slpat_settings';
@@ -38,7 +41,8 @@ export const StorageService = {
                 geminiKey: '',
                 anthropicKey: '',
                 xaiKey: '',
-                proxyUrl: import.meta.env.VITE_PROXY_URL || ''
+                proxyUrl: import.meta.env.VITE_PROXY_URL || '',
+                enableBarcodeScanning: true
             };
 
             if (!data) return defaults;
@@ -52,7 +56,8 @@ export const StorageService = {
                 geminiKey: '',
                 anthropicKey: '',
                 xaiKey: '',
-                proxyUrl: import.meta.env.VITE_PROXY_URL || ''
+                proxyUrl: import.meta.env.VITE_PROXY_URL || '',
+                enableBarcodeScanning: true
             };
         }
     },
@@ -90,5 +95,20 @@ export const StorageService = {
 
     saveRecentState: (state: any) => {
         localStorage.setItem('slpat_session', JSON.stringify(state));
+    },
+
+    getBatchSession: (): any[] | null => {
+        try {
+            const data = localStorage.getItem('slpat_batch_session');
+            return data ? JSON.parse(data) : null;
+        } catch { return null; }
+    },
+
+    saveBatchSession: (items: any[]) => {
+        localStorage.setItem('slpat_batch_session', JSON.stringify(items));
+    },
+
+    clearBatchSession: () => {
+        localStorage.removeItem('slpat_batch_session');
     }
 };

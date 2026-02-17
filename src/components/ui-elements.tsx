@@ -77,15 +77,38 @@ export const Label = React.forwardRef<HTMLLabelElement, React.LabelHTMLAttribute
 );
 Label.displayName = "Label";
 
-export const Textarea = React.forwardRef<HTMLTextAreaElement, React.TextareaHTMLAttributes<HTMLTextAreaElement>>(
-    ({ className, ...props }, ref) => {
+export const Textarea = React.forwardRef<HTMLTextAreaElement, React.TextareaHTMLAttributes<HTMLTextAreaElement> & { autoResize?: boolean }>(
+    ({ className, autoResize, onChange, ...props }, ref) => {
+        const internalRef = React.useRef<HTMLTextAreaElement>(null);
+
+        React.useImperativeHandle(ref, () => internalRef.current!, []);
+
+        const adjustHeight = (el: HTMLTextAreaElement) => {
+            el.style.height = 'auto'; // Reset to recalculate
+            el.style.height = `${el.scrollHeight + 2}px`; // +2 for border
+        };
+
+        const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+            if (autoResize) adjustHeight(e.target);
+            onChange?.(e);
+        };
+
+        React.useEffect(() => {
+            if (autoResize && internalRef.current) {
+                // Adjust on mount/value change
+                adjustHeight(internalRef.current);
+            }
+        }, [props.value, autoResize]);
+
         return (
             <textarea
-                ref={ref}
+                ref={internalRef}
                 className={cn(
                     "flex min-h-[80px] w-full rounded-md border border-border bg-surface px-3 py-2 text-sm placeholder:text-foreground-muted focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary disabled:cursor-not-allowed disabled:opacity-50 text-foreground transition-all resize-y",
+                    autoResize && "resize-none overflow-hidden",
                     className
                 )}
+                onChange={handleChange}
                 {...props}
             />
         );
