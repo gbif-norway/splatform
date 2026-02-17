@@ -53,7 +53,7 @@ export async function retryWithBackoff<T>(
         if (retries > 0 && shouldRetry(err)) {
             console.warn(`Retrying operation... (${retries} left). Error: ${err.message}`);
             await new Promise(resolve => setTimeout(resolve, delay));
-            return retryWithBackoff(fn, retries - 1, delay * backoff, shouldRetry, backoff);
+            return retryWithBackoff(fn, retries - 1, delay * backoff, backoff, shouldRetry);
         }
         throw err;
     }

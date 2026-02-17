@@ -119,7 +119,7 @@ function App() {
       const m1 = model1 || (provider1 === 'openai' ? 'gpt-4o' : provider1 === 'gemini' ? 'gemini-1.5-flash' : provider1 === 'anthropic' ? 'claude-3-5-sonnet-20240620' : 'grok-vision-beta');
 
       const r1 = await provider1Inst.generateTranscription(p1Key, m1, image, prompt1, settings.proxyUrl, { temperature: temp1 });
-      setResult1(r1);
+      setResult1(r1.text);
 
       // Step 2
       setStep(2);
@@ -127,8 +127,8 @@ function App() {
       const provider2Inst = LLMService.getProvider(provider2);
       const m2 = model2 || (provider2 === 'openai' ? 'gpt-4o' : provider2 === 'gemini' ? 'gemini-1.5-flash' : provider2 === 'anthropic' ? 'claude-3-5-sonnet-20240620' : 'grok-vision-beta');
 
-      const r2 = await provider2Inst.standardizeText((settings as any)[`${provider2}Key`] || p1Key, m2, r1, prompt2, settings.proxyUrl, { temperature: temp2 });
-      setResult2(r2);
+      const r2 = await provider2Inst.standardizeText((settings as any)[`${provider2}Key`] || p1Key, m2, r1.text, prompt2, settings.proxyUrl, { temperature: temp2 });
+      setResult2(r2.text);
 
       // Save History
       const item: TranscribedItem = {
@@ -136,9 +136,9 @@ function App() {
         timestamp: Date.now(),
         filename: "Image Upload",
         prompt1,
-        result1: r1,
+        result1: r1.text,
         prompt2,
-        result2: r2,
+        result2: r2.text,
         provider1: `${provider1}/${m1}`,
         temp1,
         provider2: `${provider2}/${m2}`,

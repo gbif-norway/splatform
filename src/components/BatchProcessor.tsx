@@ -1,7 +1,8 @@
+
 import { useState, useRef, useEffect } from 'react';
 import { Button } from './ui-elements';
 import { Card } from './ui-misc';
-import { Play, Download, CheckCircle, Clock, Loader, RefreshCw, XCircle, Trash2 } from 'lucide-react';
+import { Trash2, Play, CheckCircle, XCircle, Download, RefreshCw, Clock, DollarSign, Loader } from 'lucide-react';
 import { GBIFService } from '../services/gbif';
 import { LLMService } from '../services/llm';
 import { BarcodeService } from '../services/barcode';
@@ -11,6 +12,7 @@ import { cn } from '../utils/cn';
 import { StorageService } from '../services/storage';
 import { robustJSONParse, type JSONParseStatus } from '../utils/json';
 import { pLimit, retryWithBackoff } from '../utils/async';
+import { PricingService } from '../services/llm/pricing';
 
 interface BatchItem {
     id: string;
@@ -37,6 +39,7 @@ interface BatchItem {
         standardization?: { input: number, output: number, model: string };
         totalInput: number;
         totalOutput: number;
+        estimatedCost?: number | null;
     };
 }
 
@@ -75,6 +78,17 @@ export function BatchProcessor({
     const [isProcessing, setIsProcessing] = useState(false);
     const stopRef = useRef(false);
     const [concurrency, setConcurrency] = useState(3);
+
+    useEffect(() => {
+        // Initialize pricing service
+        PricingService.initialize().catch(err => console.error("Failed to init pricing:", err));
+    }, []);
+
+    // Load saved settings
+    useEffect(() => {
+        // This useEffect is for loading settings, not for pricing init.
+        // The pricing init useEffect is above.
+    }, []);
 
     // Stats
     const total = items.length;
@@ -139,7 +153,7 @@ export function BatchProcessor({
                     imageUrl = extractedImg;
                     gbifData = occurrence;
                 } catch (e: any) {
-                    throw new Error(`GBIF Resolution Failed: ${e.message}`);
+                    throw new Error(`GBIF Resolution Failed: ${e.message} `);
                 }
             }
 
@@ -238,11 +252,17 @@ export function BatchProcessor({
                 totalDuration: tStandardizeEnd - tScanStart // Rough total
             };
 
+            // Calculate Costs
+            const transcriptionCost = r1.usage ? PricingService.calculateCost(m1, r1.usage.inputTokens, r1.usage.outputTokens) : null;
+            const standardizationCost = r2.usage ? PricingService.calculateCost(m2, r2.usage.inputTokens, r2.usage.outputTokens) : null;
+            const totalCost = (transcriptionCost !== null && standardizationCost !== null) ? transcriptionCost + standardizationCost : null;
+
             const usageStats = {
                 transcription: r1.usage ? { input: r1.usage.inputTokens, output: r1.usage.outputTokens, model: m1 } : undefined,
                 standardization: r2.usage ? { input: r2.usage.inputTokens, output: r2.usage.outputTokens, model: m2 } : undefined,
                 totalInput: (r1.usage?.inputTokens || 0) + (r2.usage?.inputTokens || 0),
-                totalOutput: (r1.usage?.outputTokens || 0) + (r2.usage?.outputTokens || 0)
+                totalOutput: (r1.usage?.outputTokens || 0) + (r2.usage?.outputTokens || 0),
+                estimatedCost: totalCost
             };
 
             updateItem(item.id, {
@@ -445,7 +465,16 @@ export function BatchProcessor({
                         </div>
                         <div className="p-2 bg-info/10 rounded-full text-info"><Clock size={20} /></div>
                     </Card>
-                    <div className="flex items-end justify-end col-span-4">
+                    <Card className="p-4 flex items-center justify-between border-l-4 border-l-success">
+                        <div>
+                            <div className="text-xs text-foreground-muted uppercase font-bold">Est. Cost</div>
+                            <div className="text-2xl font-bold">
+                                ${items.reduce((acc, i) => acc + (i.usage?.estimatedCost || 0), 0).toFixed(4)}
+                            </div>
+                        </div>
+                        <div className="p-2 bg-success/10 rounded-full text-success"><DollarSign size={20} /></div>
+                    </Card>
+                    <div className="flex items-end justify-end col-span-3">
                         <Button variant="secondary" onClick={handleDownload} disabled={success === 0}>
                             <Download className="mr-2" size={16} /> Download CSV
                         </Button>
@@ -526,6 +555,16 @@ export function BatchProcessor({
                                                             <span title="Tokens In/Out">🎟 {item.usage.totalInput}/{item.usage.totalOutput}</span>
                                                             {item.usage.transcription && <span title={`Transcription: ${item.usage.transcription.model}`}>Step 1: {item.usage.transcription.model}</span>}
                                                             {item.usage.standardization && <span title={`Standardization: ${item.usage.standardization.model}`}>Step 2: {item.usage.standardization.model}</span>}
+                                                            {item.usage.estimatedCost !== null && item.usage.estimatedCost !== undefined && (
+                                                                <span title="Estimated Cost" className="text-success font-bold">
+                                                                    ${item.usage.estimatedCost.toFixed(5)}
+                                                                </span>
+                                                            )}
+                                                            {item.usage.estimatedCost === null && (
+                                                                <span title="Cost Unknown" className="text-warning">
+                                                                    Cost?
+                                                                </span>
+                                                            )}
                                                         </div>
                                                     )}
                                                 </div>
