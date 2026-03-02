@@ -12,11 +12,13 @@
   "dependencies": {
     "clsx": "^2.1.1",
     "html5-qrcode": "^2.3.8",
+    "idb-keyval": "^6.2.2",
     "jsonrepair": "^3.13.2",
     "lucide-react": "^0.562.0",
     "marked": "^17.0.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
+    "react-virtuoso": "^4.18.3",
     "tailwind-merge": "^3.4.0",
     "utif": "^3.1.0"
   },

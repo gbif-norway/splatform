@@ -26,11 +26,36 @@ export function pLimit(concurrency: number) {
     };
 }
 
+export async function processInChunks<T, R>(
+    items: T[],
+    chunkSize: number,
+    processFn: (item: T, index: number) => R | Promise<R>,
+    yieldMs: number = 10
+): Promise<R[]> {
+    const results: R[] = [];
+    for (let i = 0; i < items.length; i += chunkSize) {
+        const chunk = items.slice(i, i + chunkSize);
+
+        // Process this chunk
+        for (let j = 0; j < chunk.length; j++) {
+            const res = await processFn(chunk[j], i + j);
+            results.push(res);
+        }
+
+        // Yield to the event loop so the browser doesn't freeze
+        if (i + chunkSize < items.length) {
+            await new Promise(resolve => setTimeout(resolve, yieldMs));
+        }
+    }
+    return results;
+}
+
 export async function retryWithBackoff<T>(
     fn: () => Promise<T>,
-    retries = 3,
+    retries = 10,
     delay = 1000,
     backoff = 2,
+    maxDelay = 60000, // Maximum backoff delay of 60 seconds
     shouldRetry: (err: any) => boolean = (err) => {
         // Retry on network errors or 429/5xx
         const msg = String(err).toLowerCase();
@@ -52,8 +77,8 @@ export async function retryWithBackoff<T>(
     } catch (err: any) {
         if (retries > 0 && shouldRetry(err)) {
             console.warn(`Retrying operation... (${retries} left). Error: ${err.message}`);
-            await new Promise(resolve => setTimeout(resolve, delay));
-            return retryWithBackoff(fn, retries - 1, delay * backoff, backoff, shouldRetry);
+            await new Promise(resolve => setTimeout(resolve, Math.min(delay, maxDelay)));
+            return retryWithBackoff(fn, retries - 1, delay * backoff, backoff, maxDelay, shouldRetry);
         }
         throw err;
     }
