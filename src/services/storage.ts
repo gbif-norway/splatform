@@ -1,3 +1,5 @@
+import { get, set, del } from 'idb-keyval';
+
 export interface TranscribedItem {
     id: string;
     timestamp: number;
@@ -97,18 +99,27 @@ export const StorageService = {
         localStorage.setItem('slpat_session', JSON.stringify(state));
     },
 
-    getBatchSession: (): any[] | null => {
+    // Migrating batch to IndexedDB to avoid 5MB quota
+    getBatchSession: async (): Promise<any[] | null> => {
         try {
-            const data = localStorage.getItem('slpat_batch_session');
-            return data ? JSON.parse(data) : null;
+            const data = await get('slpat_batch_session');
+            return data || null;
         } catch { return null; }
     },
 
-    saveBatchSession: (items: any[]) => {
-        localStorage.setItem('slpat_batch_session', JSON.stringify(items));
+    saveBatchSession: async (items: any[]) => {
+        try {
+            await set('slpat_batch_session', items);
+        } catch (e) {
+            console.error("Failed to save batch session to IndexedDB:", e);
+        }
     },
 
-    clearBatchSession: () => {
-        localStorage.removeItem('slpat_batch_session');
+    clearBatchSession: async () => {
+        try {
+            await del('slpat_batch_session');
+        } catch (e) {
+            console.error("Failed to clear batch session from IndexedDB:", e);
+        }
     }
 };
