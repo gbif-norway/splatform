@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { useSettings } from '../hooks/useSettings';
 import { Input, Label, Button } from './ui-elements';
 import { Card } from './ui-misc';
-import { Eye, EyeOff, Save, X } from 'lucide-react';
+import { Eye, EyeOff, Save, X, RotateCcw } from 'lucide-react';
 
 export function Settings({ onClose }: { onClose?: () => void }) {
     const { settings, saveSettings } = useSettings();
@@ -51,6 +51,21 @@ export function Settings({ onClose }: { onClose?: () => void }) {
     const handleSave = () => {
         saveSettings(keys);
         if (onClose) onClose();
+    };
+
+    const handleResetDefaults = () => {
+        if (confirm("Are you sure you want to reset all settings to defaults? This will clear your API keys.")) {
+            // Define defaults here or we can just clear keys and rely on useSettings default fallback
+            const defaults = {
+                openaiKey: '',
+                geminiKey: '',
+                anthropicKey: '',
+                xaiKey: '',
+                proxyUrl: '', // Could be import.meta.env.VITE_PROXY_URL but we'll let useSettings handle that if empty? Actually let's just clear it.
+                enableBarcodeScanning: true
+            };
+            setKeys(defaults);
+        }
     };
 
     return (
@@ -153,11 +168,22 @@ export function Settings({ onClose }: { onClose?: () => void }) {
                 </div>
             </div>
 
-            <div className="pt-4 flex justify-end">
-                <Button onClick={handleSave} className="w-full sm:w-auto">
-                    <Save size={16} className="mr-2" />
-                    Save Settings
+            <div className="pt-4 flex justify-between items-center border-t border-border mt-6">
+                <Button variant="ghost" onClick={handleResetDefaults} className="text-destructive hover:text-destructive hover:bg-destructive/10">
+                    <RotateCcw size={16} className="mr-2" />
+                    Reset Defaults
                 </Button>
+                <div className="flex gap-2 w-full sm:w-auto mt-4 sm:mt-0 justify-end">
+                    {onClose && (
+                        <Button variant="ghost" onClick={onClose} className="hidden sm:flex">
+                            Cancel
+                        </Button>
+                    )}
+                    <Button onClick={handleSave} className="w-full sm:w-auto">
+                        <Save size={16} className="mr-2" />
+                        Save Settings
+                    </Button>
+                </div>
             </div>
         </Card>
     );
