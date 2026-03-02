@@ -40,11 +40,14 @@ function App() {
   // But useState initializer is better.
   const stored = StorageService.getRecentState();
 
-  const [prompt1, setPrompt1] = useState(stored?.prompt1 || "You are an experienced biologist specializing in describing herbarium specimens. You have a keen eye for detail and can describe specimens very accurately. Your task is to extract all information from the provided image of a herbarium specimen and create a short description containing all information from the image. Do not provide information on higher taxonomy beyond kingdom. Perform a literal transcription of all text visible on the specimen's label. The text on the label is handwritten.");
+  const DEFAULT_PROMPT1 = "You are an experienced biologist specializing in describing herbarium specimens. You have a keen eye for detail and can describe specimens very accurately. Your task is to extract all information from the provided image of a herbarium specimen and create a short description containing all information from the image. Do not provide information on higher taxonomy beyond kingdom. Perform a literal transcription of all text visible on the specimen's label. The text on the label is handwritten.";
+  const DEFAULT_PROMPT2 = "Standardize the provided information about a preserved specimen into a JSON object using exclusively valid Darwin Core terms. The JSON structure should follow: { \"dwc:scientificName\": \"Value\", \"dwc:locality\": \"Value\", ... }.";
+
+  const [prompt1, setPrompt1] = useState(stored?.prompt1 || DEFAULT_PROMPT1);
   const [provider1, setProvider1] = useState(stored?.provider1 || 'openai');
   const [model1, setModel1] = useState(stored?.model1 || 'gpt-4o');
 
-  const [prompt2, setPrompt2] = useState(stored?.prompt2 || "Standardize the provided information about a preserved specimen into a JSON object using exclusively valid Darwin Core terms. The JSON structure should follow: { \"dwc:scientificName\": \"Value\", \"dwc:locality\": \"Value\", ... }.");
+  const [prompt2, setPrompt2] = useState(stored?.prompt2 || DEFAULT_PROMPT2);
   const [provider2, setProvider2] = useState(stored?.provider2 || 'openai');
   const [model2, setModel2] = useState(stored?.model2 || 'gpt-4o');
 
@@ -311,6 +314,7 @@ function App() {
                       setSelectedProvider={setProvider1}
                       temperature={temp1}
                       setTemperature={setTemp1}
+                      onReset={() => setPrompt1(DEFAULT_PROMPT1)}
                     />
                     <PromptConfig
                       step={2}
@@ -322,6 +326,7 @@ function App() {
                       setSelectedProvider={setProvider2}
                       temperature={temp2}
                       setTemperature={setTemp2}
+                      onReset={() => setPrompt2(DEFAULT_PROMPT2)}
                     />
                   </div>
 
@@ -375,6 +380,7 @@ function App() {
                 setSelectedProvider={setProvider1}
                 temperature={temp1}
                 setTemperature={setTemp1}
+                onReset={() => setPrompt1(DEFAULT_PROMPT1)}
                 compact
               />
               <PromptConfig
@@ -387,6 +393,7 @@ function App() {
                 setSelectedProvider={setProvider2}
                 temperature={temp2}
                 setTemperature={setTemp2}
+                onReset={() => setPrompt2(DEFAULT_PROMPT2)}
                 compact
               />
             </div>

@@ -2,6 +2,7 @@ import { Textarea, Label } from './ui-elements';
 import { Select, Card } from './ui-misc';
 import { useModels } from '../hooks/useModels';
 import { cn } from '../utils/cn';
+import { RotateCcw } from 'lucide-react';
 
 interface PromptConfigProps {
     step: 1 | 2;
@@ -13,6 +14,7 @@ interface PromptConfigProps {
     setSelectedProvider: (val: string) => void;
     temperature: number;
     setTemperature: (val: number) => void;
+    onReset?: () => void;
     compact?: boolean;
 }
 
@@ -26,6 +28,7 @@ export function PromptConfig({
     setSelectedProvider,
     temperature,
     setTemperature,
+    onReset,
     compact = false
 }: PromptConfigProps) {
     const { models } = useModels();
@@ -82,7 +85,20 @@ export function PromptConfig({
             </div>
 
             <div className="space-y-1">
-                {!compact && <Label>System Prompt</Label>}
+                <div className="flex items-center justify-between">
+                    {!compact && <Label className="mb-0">System Prompt</Label>}
+                    {compact && <Label className="mb-0">Prompt</Label>}
+                    {onReset && (
+                        <button
+                            onClick={onReset}
+                            className="text-foreground-muted hover:text-primary transition-colors flex items-center gap-1 text-xs"
+                            title="Reset to default prompt"
+                        >
+                            <RotateCcw size={12} />
+                            <span>Reset</span>
+                        </button>
+                    )}
+                </div>
                 <Textarea
                     value={prompt}
                     onChange={(e) => setPrompt(e.target.value)}
