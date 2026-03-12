@@ -425,9 +425,8 @@ export function BatchProcessor({
     };
 
     // Virtuoso Table Row Renderer
-    const RowContextRenderer = useCallback((index: number) => {
-        const id = itemIds[index];
-        const item = itemsMap[id];
+    const RowContextRenderer = useCallback((_index: number, id: string, context: { itemsMap: Record<string, BatchItem> }) => {
+        const item = context.itemsMap[id];
         if (!item) return null;
 
         return (
@@ -637,9 +636,11 @@ export function BatchProcessor({
             )}
 
             {total > 0 && (
-                <div className="flex-1 overflow-auto border border-border rounded-lg bg-surface">
+                <div className="w-full h-[600px] border border-border rounded-lg bg-surface overflow-hidden">
                     <TableVirtuoso
+                        style={{ height: '100%', width: '100%' }}
                         data={itemIds}
+                        context={{ itemsMap }}
                         components={{
                             Table: (props) => <table {...props} className="w-full text-sm text-left" />,
                             TableHead: (props) => <thead {...props} className="bg-background text-foreground-muted font-medium text-xs uppercase tracking-wider sticky top-0 z-10" />,
@@ -653,7 +654,7 @@ export function BatchProcessor({
                                 <th className="px-4 py-3 border-b border-border bg-background text-right">Actions</th>
                             </tr>
                         )}
-                        itemContent={(index) => RowContextRenderer(index)}
+                        itemContent={RowContextRenderer}
                     />
                 </div>
             )}
