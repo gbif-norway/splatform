@@ -124,7 +124,7 @@ export const OpenAIProvider: LLMProvider = {
                 body.max_tokens = 4096;
             }
 
-            const response = await fetch(endpoint, {
+            let response = await fetch(endpoint, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -134,8 +134,27 @@ export const OpenAIProvider: LLMProvider = {
             });
 
             if (!response.ok) {
-                const err = await response.json().catch(() => ({ error: { message: response.statusText } }));
-                throw new LLMError(err.error?.message || response.statusText, 'openai');
+                let err = await response.json().catch(() => ({ error: { message: response.statusText } }));
+                
+                // Fallback for temperature error
+                if (body.temperature !== undefined && err.error?.message?.includes("'temperature' is not supported")) {
+                    delete body.temperature;
+                    response = await fetch(endpoint, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${apiKey}`
+                        },
+                        body: JSON.stringify(body)
+                    });
+                    
+                    if (!response.ok) {
+                        err = await response.json().catch(() => ({ error: { message: response.statusText } }));
+                        throw new LLMError(err.error?.message || response.statusText, 'openai');
+                    }
+                } else {
+                    throw new LLMError(err.error?.message || response.statusText, 'openai');
+                }
             }
 
             const data = await response.json();
@@ -233,7 +252,7 @@ export const OpenAIProvider: LLMProvider = {
                 body.max_tokens = 4096;
             }
 
-            const response = await fetch(endpoint, {
+            let response = await fetch(endpoint, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -243,8 +262,27 @@ export const OpenAIProvider: LLMProvider = {
             });
 
             if (!response.ok) {
-                const err = await response.json().catch(() => ({ error: { message: response.statusText } }));
-                throw new LLMError(err.error?.message || response.statusText, 'openai');
+                let err = await response.json().catch(() => ({ error: { message: response.statusText } }));
+                
+                // Fallback for temperature error
+                if (body.temperature !== undefined && err.error?.message?.includes("'temperature' is not supported")) {
+                    delete body.temperature;
+                    response = await fetch(endpoint, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${apiKey}`
+                        },
+                        body: JSON.stringify(body)
+                    });
+                    
+                    if (!response.ok) {
+                        err = await response.json().catch(() => ({ error: { message: response.statusText } }));
+                        throw new LLMError(err.error?.message || response.statusText, 'openai');
+                    }
+                } else {
+                    throw new LLMError(err.error?.message || response.statusText, 'openai');
+                }
             }
 
             const data = await response.json();
