@@ -6,7 +6,7 @@ import { PromptConfig } from './components/PromptConfig';
 import { BatchProcessor } from './components/BatchProcessor';
 import { ResultTable } from './components/ResultTable';
 import { History } from './components/History';
-import { ErrorDisplay } from './components/ErrorDisplay';
+import { ErrorDisplay, type ErrorContext } from './components/ErrorDisplay';
 import { Button } from './components/ui-elements';
 import { Settings as SettingsIcon, History as HistoryIcon, Play, Github, Sun, Moon, X, Layers, Image as ImageIcon } from 'lucide-react';
 import { cn } from './utils/cn';
@@ -27,7 +27,7 @@ function App() {
   // Error State
   const [errorState, setErrorState] = useState<{
     error: Error | null;
-    context: { provider: string; model: string; stage: 'transcription' | 'standardization'; prompt: string; rawError: any; gbifData?: GBIFOccurrence } | null;
+    context: ErrorContext | null;
   }>({ error: null, context: null });
 
   // Workflow State
@@ -167,8 +167,8 @@ function App() {
           model,
           stage,
           prompt: isStep1 ? prompt1 : prompt2,
-          rawError: e, // Pass the raw object for inspection
-          gbifData: gbifData || undefined
+          rawError: e,
+          gbifData: gbifData || undefined,
         }
       });
     } finally {
@@ -409,6 +409,7 @@ function App() {
                 provider2={provider2}
                 model2={model2}
                 temp2={temp2}
+                onShowErrorDetail={({ error, context }) => setErrorState({ error, context })}
               />
             </div>
           </div>

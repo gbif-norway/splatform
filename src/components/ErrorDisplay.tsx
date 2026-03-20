@@ -3,12 +3,15 @@ import { useState } from 'react';
 import { Button } from './ui-elements';
 import { Card } from './ui-misc';
 
-interface ErrorContext {
+export interface ErrorContext {
     provider?: string;
     model?: string;
     stage?: string; // 'transcription' | 'standardization' or generic
     prompt?: string;
     rawError?: any;
+    gbifData?: unknown;
+    /** Batch row: input line and resolved image URL when available */
+    batch?: { originalInput: string; imageUrl?: string };
 }
 
 interface ErrorDisplayProps {
@@ -31,6 +34,8 @@ export function ErrorDisplay({ error, context, onClose }: ErrorDisplayProps) {
 ${context?.stage ? `- **Operation**: ${context.stage}` : ''}
 ${context?.provider ? `- **Provider**: ${context.provider}` : ''}
 ${context?.model ? `- **Model**: ${context.model}` : ''}
+${context?.batch ? `- **Batch input**: ${context.batch.originalInput}` : ''}
+${context?.batch?.imageUrl ? `- **Resolved image URL**: ${context.batch.imageUrl}` : ''}
 
 **Raw Error Object**:
 \`\`\`json
@@ -102,6 +107,20 @@ ${navigator.userAgent}
                                     <>
                                         <span className="text-foreground-muted">Stage:</span>
                                         <span className="text-primary">{context.stage}</span>
+                                    </>
+                                )}
+
+                                {context?.batch && (
+                                    <>
+                                        <span className="text-foreground-muted">Batch input:</span>
+                                        <span className="text-foreground break-all">{context.batch.originalInput}</span>
+                                    </>
+                                )}
+
+                                {context?.batch?.imageUrl && (
+                                    <>
+                                        <span className="text-foreground-muted">Image URL:</span>
+                                        <span className="text-foreground break-all text-xs">{context.batch.imageUrl}</span>
                                     </>
                                 )}
                             </div>

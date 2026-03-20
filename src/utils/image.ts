@@ -3,6 +3,7 @@ import UTIF from 'utif';
 export const processImage = async (
     source: File | Blob | string,
     rotation: number = 0,
+    /** Max length of the longer side after rotation (width and height are both capped). */
     maxWidth: number = 2048
 ): Promise<string> => {
     // If it's a TIFF file or blob, we need to decode it first
@@ -51,10 +52,12 @@ export const processImage = async (
             const width = isRotated90 ? sourceHeight : sourceWidth;
             const height = isRotated90 ? sourceWidth : sourceHeight;
 
-            // Calculate scale
+            // Scale by the longer side only. (Scaling only when width > maxWidth left tall
+            // narrow images huge and broke API requests with oversized JSON bodies.)
+            const maxSide = Math.max(width, height);
             let scale = 1;
-            if (width > maxWidth) {
-                scale = maxWidth / width;
+            if (maxSide > maxWidth) {
+                scale = maxWidth / maxSide;
             }
 
             const finalWidth = width * scale;
