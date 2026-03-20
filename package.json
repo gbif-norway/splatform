@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "clsx": "^2.1.1",
+    "exceljs": "^4.4.0",
     "html5-qrcode": "^2.3.8",
     "idb-keyval": "^6.2.2",
     "jsonrepair": "^3.13.2",

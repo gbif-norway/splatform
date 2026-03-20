@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from './ui-elements';
 import { Card } from './ui-misc';
-import { Trash2, Play, CheckCircle, XCircle, Download, RefreshCw, Clock, DollarSign, Loader, Activity } from 'lucide-react';
+import { Trash2, Play, CheckCircle, XCircle, Download, RefreshCw, Clock, DollarSign, Loader, Activity, Bug } from 'lucide-react';
 import { GBIFService } from '../services/gbif';
 import { LLMService } from '../services/llm';
 import { BarcodeService } from '../services/barcode';
@@ -15,6 +15,23 @@ import { PricingService } from '../services/llm/pricing';
 
 import { PriceMappingModal } from './PriceMappingModal';
 import { TableVirtuoso } from 'react-virtuoso';
+import { tableToCsvBlob, tableToXlsxBlob } from '../utils/batchExport';
+import { normalizeUnknownError, serializeForErrorReport } from '../utils/errorDetail';
+import type { ErrorContext } from './ErrorDisplay';
+
+export interface BatchErrorReport {
+    message: string;
+    stack?: string;
+    name?: string;
+    provider: string;
+    model: string;
+    stage: string;
+    prompt: string;
+    rawError: unknown;
+    gbifData?: unknown;
+    originalInput: string;
+    imageUrl?: string;
+}
 
 interface BatchItem {
     id: string;
@@ -28,6 +45,8 @@ interface BatchItem {
     parsingStatus?: JSONParseStatus;
     detectedCodes?: string[];
     error?: string;
+    /** Serializable details for the same error modal as single-file mode */
+    errorReport?: BatchErrorReport;
     gbifData?: any;
     timings?: {
         resolveDuration?: number;
@@ -55,12 +74,18 @@ interface BatchProcessorProps {
     provider2: string;
     model2: string;
     temp2: number;
+    onShowErrorDetail?: (payload: { error: Error; context: ErrorContext }) => void;
+}
+
+function defaultModel(provider: string, model: string) {
+    return model || (provider === 'openai' ? 'gpt-4o' : provider === 'gemini' ? 'gemini-1.5-flash' : provider === 'anthropic' ? 'claude-3-5-sonnet-20240620' : 'grok-vision-beta');
 }
 
 export function BatchProcessor({
     settings,
     prompt1, provider1, model1, temp1,
-    prompt2, provider2, model2, temp2
+    prompt2, provider2, model2, temp2,
+    onShowErrorDetail
 }: BatchProcessorProps) {
     const [input, setInput] = useState('');
 
@@ -170,14 +195,18 @@ export function BatchProcessor({
     const processItem = async (item: BatchItem, updateItem: (id: string, updates: Partial<BatchItem>) => void) => {
         if (stopRef.current) return;
 
-        updateItem(item.id, { status: 'processing', error: undefined, step: 'resolving' });
+        updateItem(item.id, { status: 'processing', error: undefined, errorReport: undefined, step: 'resolving' });
+
+        type FailPhase = 'resolving' | 'scanning' | 'transcribing' | 'standardizing';
+        let phase: FailPhase = 'resolving';
+        const m1 = defaultModel(provider1, model1);
+        const m2 = defaultModel(provider2, model2);
+
+        let imageUrl = item.originalInput;
+        let gbifData: any = null;
 
         try {
             // 1. Resolve Image
-            let imageUrl = item.originalInput;
-            let gbifData = null;
-
-            // Check if it's a GBIF ID or URL
             const gbifId = GBIFService.parseOccurrenceId(item.originalInput);
             if (gbifId) {
                 try {
@@ -193,6 +222,7 @@ export function BatchProcessor({
 
             const base64Image = await processImage(imageUrl, 0); // 0 rotation
 
+            phase = 'scanning';
             const tScanStart = performance.now();
             updateItem(item.id, { imageUrl: imageUrl, gbifData, step: 'scanning' });
 
@@ -217,12 +247,12 @@ export function BatchProcessor({
             updateItem(item.id, { detectedCodes, step: 'transcribing' });
 
             // 2. Transcribe
+            phase = 'transcribing';
             const tTranscribeStart = performance.now();
             const p1Key = settings[`${provider1}Key`];
             if (!p1Key) throw new Error(`Missing API Key for ${provider1}`);
 
             const provider1Inst = LLMService.getProvider(provider1);
-            const m1 = model1 || (provider1 === 'openai' ? 'gpt-4o' : provider1 === 'gemini' ? 'gemini-1.5-flash' : provider1 === 'anthropic' ? 'claude-3-5-sonnet-20240620' : 'grok-vision-beta');
 
             const r1 = await retryWithBackoff(() => provider1Inst.generateTranscription(
                 p1Key,
@@ -237,12 +267,12 @@ export function BatchProcessor({
             updateItem(item.id, { transcription: r1.text, step: 'standardizing' });
 
             // 3. Standardize
+            phase = 'standardizing';
             const tStandardizeStart = performance.now();
             const p2Key = settings[`${provider2}Key`] || p1Key;
             if (!p2Key && provider1 !== provider2) throw new Error(`Missing API Key for ${provider2}`);
 
             const provider2Inst = LLMService.getProvider(provider2);
-            const m2 = model2 || (provider2 === 'openai' ? 'gpt-4o' : provider2 === 'gemini' ? 'gemini-1.5-flash' : provider2 === 'anthropic' ? 'claude-3-5-sonnet-20240620' : 'grok-vision-beta');
 
             const r2 = await retryWithBackoff(() => provider2Inst.standardizeText(
                 p2Key,
@@ -306,9 +336,48 @@ export function BatchProcessor({
                 });
             }, 0);
 
-        } catch (e: any) {
+        } catch (e: unknown) {
             console.error(`Item ${item.id} failed:`, e);
-            updateItem(item.id, { status: 'failed', error: e.message || String(e) });
+            const normalized = normalizeUnknownError(e);
+
+            let errProvider = '(pre-LLM)';
+            let errModel = '—';
+            let errPrompt = '';
+            let stage = 'batch: resolving';
+
+            if (phase === 'transcribing') {
+                errProvider = provider1;
+                errModel = m1;
+                errPrompt = prompt1;
+                stage = 'transcription';
+            } else if (phase === 'standardizing') {
+                errProvider = provider2;
+                errModel = m2;
+                errPrompt = prompt2;
+                stage = 'standardization';
+            } else if (phase === 'scanning') {
+                stage = 'batch: barcode scan';
+            }
+
+            const errorReport: BatchErrorReport = {
+                message: normalized.message,
+                stack: normalized.stack,
+                name: normalized.name,
+                provider: errProvider,
+                model: errModel,
+                stage,
+                prompt: errPrompt,
+                rawError: serializeForErrorReport(e),
+                gbifData: gbifData ?? undefined,
+                originalInput: item.originalInput,
+                imageUrl,
+            };
+
+            updateItem(item.id, {
+                status: 'failed',
+                error: normalized.message,
+                errorReport,
+            });
         }
     };
 
@@ -362,16 +431,15 @@ export function BatchProcessor({
         processItem(item, updateItem);
     };
 
-    // Asynchronous large CSV Download to prevent Main Thread Block
-    const handleDownload = async () => {
+    // Asynchronous export (CSV / XLSX) to keep the UI responsive on large batches
+    const handleDownload = async (format: 'csv' | 'xlsx') => {
         if (success === 0) return;
-        setIsProcessing(true); // Re-use spinner UI to show we're building CSV
+        setIsProcessing(true);
 
         try {
             const allKeys = new Set<string>();
             const itemsList = itemIds.map(id => itemsMap[id]);
 
-            // Chunked JSON key scan
             await processInChunks(itemsList, 1000, (item) => {
                 if (item.parsedData) {
                     Object.keys(item.parsedData).forEach(k => allKeys.add(k));
@@ -382,10 +450,9 @@ export function BatchProcessor({
             const baseHeaders = ["ID", "Input", "Status", "JSON Status", "Detected Barcodes", "Transcription", "GBIF Specific Name", "Error"];
             const headers = [...baseHeaders, ...sortedKeys];
 
-            // Chunked Rows Builder
             const rows = await processInChunks(itemsList, 1000, (item) => {
                 const json: any = item.parsedData || {};
-                const rowData = [
+                const rowData: string[] = [
                     item.id,
                     item.originalInput,
                     item.status,
@@ -401,28 +468,51 @@ export function BatchProcessor({
                     rowData.push(val !== undefined && val !== null ? String(val) : "");
                 });
 
-                return rowData.map(val => `"${String(val).replace(/"/g, '""')}"`).join(",");
+                return rowData;
             }, 5);
 
-            const csvContent = [headers.join(","), ...rows].join("\n");
+            const stamp = new Date().toISOString();
+            const blob =
+                format === 'csv'
+                    ? tableToCsvBlob(headers, rows)
+                    : await tableToXlsxBlob(headers, rows);
 
-            // Create Download
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
             const url = URL.createObjectURL(blob);
             const link = document.createElement("a");
             link.setAttribute("href", url);
-            link.setAttribute("download", `batch_results_${new Date().toISOString()}.csv`);
+            link.setAttribute(
+                "download",
+                format === 'csv' ? `batch_results_${stamp}.csv` : `batch_results_${stamp}.xlsx`
+            );
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
             setTimeout(() => URL.revokeObjectURL(url), 1000);
-
         } catch (e) {
-            console.error("Failed to generate CSV:", e);
+            console.error(`Failed to generate ${format.toUpperCase()}:`, e);
         } finally {
             setIsProcessing(false);
         }
     };
+
+    const openBatchErrorFromReport = useCallback((report: BatchErrorReport) => {
+        if (!onShowErrorDetail) return;
+        const err = new Error(report.message);
+        if (report.stack) err.stack = report.stack;
+        if (report.name) err.name = report.name;
+        onShowErrorDetail({
+            error: err,
+            context: {
+                provider: report.provider,
+                model: report.model,
+                stage: report.stage,
+                prompt: report.prompt,
+                rawError: report.rawError,
+                gbifData: report.gbifData,
+                batch: { originalInput: report.originalInput, imageUrl: report.imageUrl },
+            },
+        });
+    }, [onShowErrorDetail]);
 
     // Virtuoso Table Row Renderer
     const RowContextRenderer = useCallback((_index: number, id: string, context: { itemsMap: Record<string, BatchItem> }) => {
@@ -478,7 +568,22 @@ export function BatchProcessor({
                             </div>
                         )}
                         {item.error ? (
-                            <span className="text-destructive text-xs">{item.error}</span>
+                            <div className="flex flex-wrap items-start gap-2 w-full">
+                                <span className="text-destructive text-xs whitespace-pre-wrap break-words flex-1 min-w-0">{item.error}</span>
+                                {item.errorReport && onShowErrorDetail && (
+                                    <Button
+                                        type="button"
+                                        size="sm"
+                                        variant="secondary"
+                                        className="h-7 shrink-0 text-xs"
+                                        onClick={() => openBatchErrorFromReport(item.errorReport!)}
+                                        title="Full error, copy, and GitHub report"
+                                    >
+                                        <Bug size={12} className="mr-1" />
+                                        Details
+                                    </Button>
+                                )}
+                            </div>
                         ) : (
                             <div className="flex flex-col gap-0.5">
                                 <div className="text-xs text-foreground-muted truncate">
@@ -518,7 +623,7 @@ export function BatchProcessor({
                 </td>
             </>
         );
-    }, [itemsMap, itemIds]);
+    }, [openBatchErrorFromReport, onShowErrorDetail, itemsMap, itemIds]);
 
 
     if (!isLoaded) return <div className="flex items-center justify-center p-8"><Loader className="animate-spin mr-2" /> Loading session...</div>;
@@ -627,9 +732,12 @@ export function BatchProcessor({
                         </div>
                         <div className="p-2 bg-warning/10 rounded-full text-warning"><Activity size={20} /></div>
                     </Card>
-                    <div className="flex items-end justify-end col-span-3">
-                        <Button variant="secondary" onClick={handleDownload} disabled={success === 0 || isProcessing}>
+                    <div className="flex flex-wrap items-end justify-end gap-2 col-span-3">
+                        <Button variant="secondary" onClick={() => handleDownload('csv')} disabled={success === 0 || isProcessing}>
                             {isProcessing ? <Loader className="animate-spin mr-2" size={16} /> : <Download className="mr-2" size={16} />} Download CSV
+                        </Button>
+                        <Button variant="secondary" onClick={() => handleDownload('xlsx')} disabled={success === 0 || isProcessing}>
+                            {isProcessing ? <Loader className="animate-spin mr-2" size={16} /> : <Download className="mr-2" size={16} />} Download Excel (.xlsx)
                         </Button>
                     </div>
                 </div>
